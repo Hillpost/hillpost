@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { format } from "date-fns";
-import { ExternalLink, Pencil, X, History } from "lucide-react";
+import { ExternalLink, Pencil, X, History, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { cn, safeHref } from "@/lib/utils";
 
@@ -17,23 +17,32 @@ export function PublicSubmissions({ hackathonId, role }: PublicSubmissionsProps)
   const router = useRouter();
   const submissions = useQuery(api.submissions.list, { hackathonId });
   const teams = useQuery(api.teams.list, { hackathonId });
+  const tracks = useQuery(api.tracks.list, { hackathonId });
   const updateSubmissionOrganizer = useMutation(api.submissions.updateSubmissionOrganizer);
+  const setTeamTracksOrganizer = useMutation(api.tracks.setTeamTracksOrganizer);
 
   const [editingId, setEditingId] = useState<Id<"submissions"> | null>(null);
+  const [editTeamId, setEditTeamId] = useState<Id<"teams"> | null>(null);
   const [changelogId, setChangelogId] = useState<Id<"submissions"> | null>(null);
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editProjUrl, setEditProjUrl] = useState("");
   const [editDemoUrl, setEditDemoUrl] = useState("");
   const [editDeployedUrl, setEditDeployedUrl] = useState("");
+  const [editTrackIds, setEditTrackIds] = useState<Id<"tracks">[]>([]);
 
-  const startEditing = (sub: { _id: Id<"submissions">; name: string; description: string; projectUrl: string; demoUrl?: string; deployedUrl?: string }) => {
+  const startEditing = (sub: { _id: Id<"submissions">; teamId: Id<"teams">; name: string; description: string; projectUrl: string; demoUrl?: string; deployedUrl?: string }) => {
     setEditingId(sub._id);
+    setEditTeamId(sub.teamId);
     setEditName(sub.name);
     setEditDesc(sub.description);
     setEditProjUrl(sub.projectUrl);
     setEditDemoUrl(sub.demoUrl || "");
     setEditDeployedUrl(sub.deployedUrl || "");
+    const currentTrackIds = tracks
+      ?.filter((t) => t.teamIds.includes(sub.teamId))
+      .map((t) => t._id) ?? [];
+    setEditTrackIds(currentTrackIds);
   };
 
   const handleSave = async (submissionId: Id<"submissions">) => {
@@ -47,6 +56,9 @@ export function PublicSubmissions({ hackathonId, role }: PublicSubmissionsProps)
         demoUrl: editDemoUrl || undefined,
         deployedUrl: editDeployedUrl || undefined,
       });
+      if (editTeamId) {
+        await setTeamTracksOrganizer({ hackathonId, teamId: editTeamId, trackIds: editTrackIds });
+      }
       toast.success("Submission updated");
       setEditingId(null);
     } catch (error) {
@@ -68,6 +80,7 @@ export function PublicSubmissions({ hackathonId, role }: PublicSubmissionsProps)
             const projectHref = safeHref(sub.projectUrl);
             const demoHref = safeHref(sub.demoUrl);
             const deployedHref = safeHref(sub.deployedUrl);
+            const subTracks = tracks?.filter((t) => t.teamIds.includes(sub.teamId)) ?? [];
             return (
               <div
                 key={sub._id}
@@ -97,6 +110,12 @@ export function PublicSubmissions({ hackathonId, role }: PublicSubmissionsProps)
                           v{sub.submissionCount}
                         </span>
                       )}
+                      {subTracks.map((st) => (
+                        <span key={st._id} className="tui-badge border-[#FF6600] text-[#FF6600] flex items-center gap-1">
+                          <Tag className="h-2.5 w-2.5" />
+                          {st.name}
+                        </span>
+                      ))}
                     </div>
                     <p className="text-xs text-[#555555]">{sub.description}</p>
                     {sub.submissionCount > 1 && sub.changelog && sub.changelog.length > 0 && (
@@ -302,6 +321,34 @@ export function PublicSubmissions({ hackathonId, role }: PublicSubmissionsProps)
                 className="tui-input mt-2"
               />
             </div>
+            {tracks && tracks.length > 0 && (
+              <div>
+                <label className="text-xs font-bold text-[#555555] uppercase tracking-widest">TRACKS (OPTIONAL):</label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {tracks.map((track) => {
+                    const isSelected = editTrackIds.includes(track._id);
+                    return (
+                      <button
+                        key={track._id}
+                        type="button"
+                        onClick={() => setEditTrackIds(isSelected
+                          ? editTrackIds.filter((id) => id !== track._id)
+                          : [...editTrackIds, track._id]
+                        )}
+                        className={cn(
+                          "px-3 py-1.5 text-xs font-bold uppercase tracking-wider border transition-colors",
+                          isSelected
+                            ? "border-[#00B4FF] bg-[#00B4FF] text-black"
+                            : "border-[#1F1F1F] text-[#555555] hover:border-[#00B4FF] hover:text-[#00B4FF]"
+                        )}
+                      >
+                        {track.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="border-t border-[#1F1F1F] px-5 py-4 flex justify-end gap-2 shrink-0">
