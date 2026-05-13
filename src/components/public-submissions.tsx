@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { format } from "date-fns";
-import { ExternalLink, Pencil, X, History } from "lucide-react";
+import { ExternalLink, Pencil, X, History, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { cn, safeHref } from "@/lib/utils";
 
@@ -78,6 +78,7 @@ export function PublicSubmissions({ hackathonId, role }: PublicSubmissionsProps)
             const projectHref = safeHref(sub.projectUrl);
             const demoHref = safeHref(sub.demoUrl);
             const deployedHref = safeHref(sub.deployedUrl);
+            const subTrack = tracks?.find((t) => t.teamIds.includes(sub.teamId));
             return (
               <div
                 key={sub._id}
@@ -105,6 +106,12 @@ export function PublicSubmissions({ hackathonId, role }: PublicSubmissionsProps)
                       {sub.submissionCount > 1 && (
                         <span className="tui-badge border-[#00B4FF] text-[#00B4FF]">
                           v{sub.submissionCount}
+                        </span>
+                      )}
+                      {subTrack && (
+                        <span className="tui-badge border-[#FF6600] text-[#FF6600] flex items-center gap-1">
+                          <Tag className="h-2.5 w-2.5" />
+                          {subTrack.name}
                         </span>
                       )}
                     </div>

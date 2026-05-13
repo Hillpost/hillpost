@@ -10,6 +10,7 @@ import { ArrowLeft, ExternalLink, Pencil, X, History, MessageSquare } from "luci
 import { format } from "date-fns";
 import { cn, safeHref } from "@/lib/utils";
 import { toast } from "sonner";
+import { Tag } from "lucide-react";
 
 export default function SubmissionDetailPage() {
   const params = useParams();
@@ -22,7 +23,9 @@ export default function SubmissionDetailPage() {
   const membership = useQuery(api.members.getMyMembership, { hackathonId });
   const categories = useQuery(api.categories.list, { hackathonId });
   const scores = useQuery(api.scores.getForSubmission, { submissionId });
+  const tracks = useQuery(api.tracks.list, { hackathonId });
   const updateSubmissionOrganizer = useMutation(api.submissions.updateSubmissionOrganizer);
+  const setTeamTrackOrganizer = useMutation(api.tracks.setTeamTrackOrganizer);
 
   const teamId = submission?.teamId;
   const team = useQuery(api.teams.get, teamId ? { teamId } : "skip");
@@ -33,6 +36,11 @@ export default function SubmissionDetailPage() {
   const [editProjUrl, setEditProjUrl] = useState("");
   const [editDemoUrl, setEditDemoUrl] = useState("");
   const [editDeployedUrl, setEditDeployedUrl] = useState("");
+  const [editTrackId, setEditTrackId] = useState<Id<"tracks"> | null>(null);
+
+  const teamTrack = submission?.teamId && tracks
+    ? tracks.find((t) => t.teamIds.includes(submission.teamId))
+    : undefined;
 
   const startEditing = () => {
     if (!submission) return;
@@ -41,6 +49,8 @@ export default function SubmissionDetailPage() {
     setEditProjUrl(submission.projectUrl);
     setEditDemoUrl(submission.demoUrl || "");
     setEditDeployedUrl(submission.deployedUrl || "");
+    const currentTrack = tracks?.find((t) => t.teamIds.includes(submission.teamId));
+    setEditTrackId(currentTrack?._id ?? null);
     setIsEditing(true);
   };
 
@@ -55,6 +65,9 @@ export default function SubmissionDetailPage() {
         demoUrl: editDemoUrl || undefined,
         deployedUrl: editDeployedUrl || undefined,
       });
+      if (submission.teamId) {
+        await setTeamTrackOrganizer({ hackathonId, teamId: submission.teamId, trackId: editTrackId });
+      }
       toast.success("Submission updated");
       setIsEditing(false);
     } catch (error) {
@@ -127,6 +140,12 @@ export default function SubmissionDetailPage() {
               )}
               {submission.submissionCount > 1 && (
                 <span className="tui-badge border-[#00B4FF] text-[#00B4FF] whitespace-nowrap">v{submission.submissionCount}</span>
+              )}
+              {teamTrack && (
+                <span className="tui-badge border-[#FF6600] text-[#FF6600] whitespace-nowrap flex items-center gap-1">
+                  <Tag className="h-2.5 w-2.5" />
+                  {teamTrack.name}
+                </span>
               )}
             </div>
             <p className="text-xs text-[#555555]">
@@ -398,6 +417,31 @@ export default function SubmissionDetailPage() {
                 className="tui-input mt-2"
               />
             </div>
+            {tracks && tracks.length > 0 && (
+              <div>
+                <label className="text-xs font-bold text-[#555555] uppercase tracking-widest">TRACK (OPTIONAL):</label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {tracks.map((track) => {
+                    const isSelected = editTrackId === track._id;
+                    return (
+                      <button
+                        key={track._id}
+                        type="button"
+                        onClick={() => setEditTrackId(isSelected ? null : track._id)}
+                        className={cn(
+                          "px-3 py-1.5 text-xs font-bold uppercase tracking-wider border transition-colors",
+                          isSelected
+                            ? "border-[#00B4FF] bg-[#00B4FF] text-black"
+                            : "border-[#1F1F1F] text-[#555555] hover:border-[#00B4FF] hover:text-[#00B4FF]"
+                        )}
+                      >
+                        {track.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="border-t border-[#1F1F1F] px-5 py-4 flex justify-end gap-2 shrink-0">
