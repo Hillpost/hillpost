@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -86,7 +87,10 @@ function HackathonInfoSection({
   hackathonId,
   hackathon,
 }: OrganizerPanelProps) {
+  const router = useRouter();
   const updateHackathon = useMutation(api.hackathons.update);
+  const removeHackathon = useMutation(api.hackathons.remove);
+  const [isDeletingHackathon, setIsDeletingHackathon] = useState(false);
   const [copiedCompetitor, setCopiedCompetitor] = useState(false);
   const [copiedJudge, setCopiedJudge] = useState(false);
   const [copiedCompetitorLink, setCopiedCompetitorLink] = useState(false);
@@ -292,6 +296,24 @@ function HackathonInfoSection({
       setIsEditingDates(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update dates");
+    }
+  };
+
+  const deleteHackathon = async () => {
+    if (isDeletingHackathon) return;
+    const confirmed = window.confirm(
+      `Delete "${hackathon.name}" and all related data? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setIsDeletingHackathon(true);
+    try {
+      await removeHackathon({ hackathonId });
+      toast.success("Event deleted");
+      router.push("/dashboard");
+    } catch (error) {
+      setIsDeletingHackathon(false);
+      toast.error(error instanceof Error ? error.message : "Failed to delete event");
     }
   };
 
@@ -641,6 +663,25 @@ function HackathonInfoSection({
               <p className="mt-1 text-[10px] text-[#333333] uppercase">Share this link so anyone can view the event and register as a competitor.</p>
             </div>
           )}
+        </div>
+
+        {/* Danger zone */}
+        <div className="border-t border-red-500/30 pt-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <span className="text-xs font-bold text-red-400 uppercase tracking-widest">DANGER ZONE:</span>
+              <p className="text-xs text-[#333333] mt-0.5">
+                Permanently delete this event and all related members, teams, submissions, scores, categories, and sponsors.
+              </p>
+            </div>
+            <button
+              onClick={deleteHackathon}
+              disabled={isDeletingHackathon}
+              className="px-4 py-2 text-xs font-bold uppercase tracking-wider border border-red-500/40 text-red-400 hover:border-red-500 hover:bg-red-500 hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDeletingHackathon ? "[ DELETING... ]" : "[ DELETE EVENT ]"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
