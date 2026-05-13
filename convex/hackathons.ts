@@ -362,16 +362,17 @@ export const remove = mutation({
       .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
       .collect();
 
-    for (const submission of submissions) {
-      const scores = await ctx.db
-        .query("scores")
-        .withIndex("by_submissionId", (q) => q.eq("submissionId", submission._id))
-        .collect();
-      for (const score of scores) {
-        await ctx.db.delete(score._id);
-      }
-      await ctx.db.delete(submission._id);
-    }
+    const scoresBySubmission = await Promise.all(
+      submissions.map((submission) =>
+        ctx.db
+          .query("scores")
+          .withIndex("by_submissionId", (q) => q.eq("submissionId", submission._id))
+          .collect()
+      )
+    );
+    const scoreIds = scoresBySubmission.flat().map((score) => score._id);
+    await Promise.all(scoreIds.map((scoreId) => ctx.db.delete(scoreId)));
+    await Promise.all(submissions.map((submission) => ctx.db.delete(submission._id)));
 
     const [teams, categories, sponsors, members] = await Promise.all([
       ctx.db
@@ -392,18 +393,12 @@ export const remove = mutation({
         .collect(),
     ]);
 
-    for (const team of teams) {
-      await ctx.db.delete(team._id);
-    }
-    for (const category of categories) {
-      await ctx.db.delete(category._id);
-    }
-    for (const sponsor of sponsors) {
-      await ctx.db.delete(sponsor._id);
-    }
-    for (const member of members) {
-      await ctx.db.delete(member._id);
-    }
+    await Promise.all([
+      ...teams.map((team) => ctx.db.delete(team._id)),
+      ...categories.map((category) => ctx.db.delete(category._id)),
+      ...sponsors.map((sponsor) => ctx.db.delete(sponsor._id)),
+      ...members.map((member) => ctx.db.delete(member._id)),
+    ]);
 
     await ctx.db.delete(args.hackathonId);
   },
