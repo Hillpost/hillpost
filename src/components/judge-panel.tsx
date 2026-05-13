@@ -16,6 +16,7 @@ import {
   History,
   X,
   Search,
+  Tag,
 } from "lucide-react";
 import { PanelSkeleton } from "@/components/skeleton";
 
@@ -206,6 +207,7 @@ export function JudgePanel({ hackathonId, hackathon }: JudgePanelProps) {
               const projectHref = safeHref(sub.projectUrl);
               const demoHref = safeHref(sub.demoUrl);
               const deployedHref = safeHref(sub.deployedUrl);
+              const subTracks = tracks.filter((t) => t.teamIds.includes(sub.teamId));
               return (
               <div key={sub._id} className="border border-[#1F1F1F] bg-[#111111]">
                 <button
@@ -223,6 +225,12 @@ export function JudgePanel({ hackathonId, hackathon }: JudgePanelProps) {
                           v{sub.submissionCount}
                         </span>
                       )}
+                      {subTracks.map((st) => (
+                        <span key={st._id} className="tui-badge border-[#FF6600] text-[#FF6600] flex items-center gap-1">
+                          <Tag className="h-2.5 w-2.5" />
+                          {st.name}
+                        </span>
+                      ))}
                     </div>
                     <p className="text-xs text-[#555555]">{sub.description}</p>
                     {sub.submissionCount > 1 && sub.changelog && sub.changelog.length > 0 && (() => {
