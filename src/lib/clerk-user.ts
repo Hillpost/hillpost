@@ -21,3 +21,16 @@ export function getClerkDisplayName(user: ClerkDisplayUser | null | undefined): 
 
   return cleanDisplayName(user?.username);
 }
+
+export function getRequiredClerkDisplayName(
+  user: ClerkDisplayUser | null | undefined
+): string | undefined {
+  const displayName = getClerkDisplayName(user);
+  if (displayName) return displayName;
+
+  if (typeof window === "undefined") return undefined;
+
+  return cleanDisplayName(
+    window.prompt("What name should we show other participants?")
+  );
+}

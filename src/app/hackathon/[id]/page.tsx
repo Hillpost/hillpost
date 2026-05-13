@@ -6,7 +6,7 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import { useParams, useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
-import { getClerkDisplayName } from "@/lib/clerk-user";
+import { getRequiredClerkDisplayName } from "@/lib/clerk-user";
 import { format } from "date-fns";
 import React, { useState } from "react";
 import Link from "next/link";
@@ -184,11 +184,17 @@ export default function HackathonDetailPage() {
       return;
     }
 
+    const userName = getRequiredClerkDisplayName(user);
+    if (!userName) {
+      toast.error("Please enter your name to continue");
+      return;
+    }
+
     setIsJoiningPublic(true);
     try {
       const result = await joinPublic({
         hackathonId,
-        userName: getClerkDisplayName(user),
+        userName,
         userImageUrl: user?.imageUrl,
       });
       if (result.alreadyMember) {

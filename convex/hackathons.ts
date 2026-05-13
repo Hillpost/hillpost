@@ -4,7 +4,29 @@ import { requireAuthUserId, getAuthUserId, getAuthUserName } from "./auth";
 
 function sanitizeDisplayName(name: string | undefined): string | undefined {
   const trimmed = name?.trim();
-  return trimmed || undefined;
+  if (!trimmed) return undefined;
+  if (/[\u0000-\u001F\u007F]/.test(trimmed)) {
+    throw new Error("Display name cannot contain control characters");
+  }
+
+  const normalized = trimmed.replace(/ {2,}/g, " ");
+  if (normalized.length > 80) {
+    throw new Error("Display name must be 80 characters or fewer");
+  }
+  return normalized;
+}
+
+async function requireDisplayName(
+  ctx: Parameters<typeof getAuthUserName>[0],
+  providedName: string | undefined
+): Promise<string> {
+  const userName =
+    sanitizeDisplayName(providedName) ??
+    sanitizeDisplayName(await getAuthUserName(ctx));
+  if (!userName) {
+    throw new Error("Please enter your name to continue");
+  }
+  return userName;
 }
 
 function generateJoinCode(): string {
@@ -51,7 +73,7 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
-    const userName = sanitizeDisplayName(args.userName) ?? await getAuthUserName(ctx);
+    const userName = await requireDisplayName(ctx, args.userName);
 
     let competitorJoinCode = generateJoinCode();
     let judgeJoinCode = generateJoinCode();
@@ -342,7 +364,7 @@ export const join = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
-    const userName = sanitizeDisplayName(args.userName) ?? await getAuthUserName(ctx);
+    const userName = await requireDisplayName(ctx, args.userName);
 
     let hackathon = await ctx.db
       .query("hackathons")
@@ -398,7 +420,7 @@ export const joinPublic = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
-    const userName = sanitizeDisplayName(await getAuthUserName(ctx)) ?? "Unknown";
+    const userName = await requireDisplayName(ctx, args.userName);
 
     const hackathon = await ctx.db.get(args.hackathonId);
     if (

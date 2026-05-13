@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { X, Lock, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isSafeHttpUrl } from "@/lib/url";
-import { getClerkDisplayName } from "@/lib/clerk-user";
+import { getRequiredClerkDisplayName } from "@/lib/clerk-user";
 
 interface CreateHackathonDialogProps {
   isOpen: boolean;
@@ -61,6 +61,11 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
       toast.error("Banner image URL must be a valid http(s) URL");
       return;
     }
+    const userName = getRequiredClerkDisplayName(user);
+    if (!userName) {
+      toast.error("Please enter your name to continue");
+      return;
+    }
     setIsSubmitting(true);
     try {
       const hackathonId = await createHackathon({
@@ -71,7 +76,7 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
         submissionFrequencyMinutes: submissionFrequency,
         openGraphImageUrl: trimmedBanner || undefined,
         isPublic,
-        userName: getClerkDisplayName(user),
+        userName,
         userImageUrl: user?.imageUrl,
       });
       toast.success("Hackathon created successfully!");

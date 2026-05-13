@@ -346,10 +346,7 @@ export const getFeedbackForSubmission = query({
         )
         .collect();
       for (const member of members) {
-        judgeNameMap.set(
-          member.userId,
-          member.userName ?? "Unknown Judge"
-        );
+        judgeNameMap.set(member.userId, member.userName);
       }
     }
 
