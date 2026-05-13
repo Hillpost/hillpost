@@ -7,6 +7,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import { ExternalLink, MessageSquare } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { SectionSkeleton } from "@/components/skeleton";
 
 interface CompetitorPanelProps {
@@ -30,12 +31,27 @@ export function CompetitorPanel({ hackathonId, hackathon }: CompetitorPanelProps
 function TeamSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
   const myTeam = useQuery(api.teams.getMyTeam, { hackathonId });
   const teams = useQuery(api.teams.list, { hackathonId });
+  const tracks = useQuery(api.tracks.list, { hackathonId });
   const createTeam = useMutation(api.teams.create);
   const joinTeam = useMutation(api.teams.joinTeam);
   const leaveTeam = useMutation(api.teams.leaveTeam);
+  const setMyTeamTrack = useMutation(api.tracks.setMyTeamTrack);
 
   const [teamName, setTeamName] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  const myTrack = myTeam && tracks
+    ? tracks.find((t) => t.teamIds.includes(myTeam._id))
+    : undefined;
+
+  const handleSetTrack = async (trackId: Id<"tracks"> | null) => {
+    try {
+      await setMyTeamTrack({ hackathonId, trackId });
+      toast.success(trackId ? "Track selected!" : "Track cleared");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update track");
+    }
+  };
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +113,31 @@ function TeamSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
             </p>
           ))}
         </div>
+        {tracks && tracks.length > 0 && (
+          <div className="mt-4 border-t border-[#1F1F1F] pt-4">
+            <p className="mb-2 text-xs font-bold text-[#555555] uppercase tracking-widest">TRACK:</p>
+            <div className="flex flex-wrap gap-2">
+              {tracks.map((track) => {
+                const isSelected = myTrack?._id === track._id;
+                return (
+                  <button
+                    key={track._id}
+                    onClick={() => handleSetTrack(isSelected ? null : track._id)}
+                    title={track.description}
+                    className={cn(
+                      "px-3 py-1.5 text-xs font-bold uppercase tracking-wider border transition-colors",
+                      isSelected
+                        ? "border-[#00B4FF] bg-[#00B4FF] text-black"
+                        : "border-[#1F1F1F] text-[#555555] hover:border-[#00B4FF] hover:text-[#00B4FF]"
+                    )}
+                  >
+                    {track.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   }

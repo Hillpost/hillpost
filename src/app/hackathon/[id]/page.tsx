@@ -60,6 +60,7 @@ export default function HackathonDetailPage() {
   const submissions = useQuery(api.submissions.list, { hackathonId });
   const allMembers = useQuery(api.members.listMembers, role === "organizer" ? { hackathonId } : "skip");
   const categories = useQuery(api.categories.list, { hackathonId });
+  const tracks = useQuery(api.tracks.list, { hackathonId });
   const sponsors = useQuery(api.sponsors.list, { hackathonId });
   const featuredSponsors = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "featured") ?? [];
   const largeSponsors = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "large") ?? [];
@@ -757,6 +758,30 @@ export default function HackathonDetailPage() {
             </div>
           )}
 
+
+          {tracks && tracks.length > 0 && (
+            <div className="border border-[#1F1F1F] bg-[#0A0A0A] p-6">
+              <div className="mb-4 flex items-center gap-3">
+                <span className="text-xs text-[#555555] uppercase tracking-widest">── TRACKS</span>
+                <div className="h-px flex-1 bg-[#1F1F1F]" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {tracks.map((track) => (
+                  <div key={track._id} className="border border-[#1F1F1F] bg-[#111111] p-4 transition-colors hover:border-[#2a2a2a]">
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="text-sm font-bold text-white uppercase tracking-wide">{track.name}</p>
+                      <span className="tui-badge border-[#00B4FF] text-[#00B4FF]">
+                        {track.teamIds.length} {track.teamIds.length === 1 ? "TEAM" : "TEAMS"}
+                      </span>
+                    </div>
+                    {track.description && (
+                      <p className="text-xs text-[#555555] leading-relaxed whitespace-pre-wrap break-words">{track.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {categories && categories.length > 0 && (
             <div className="border border-[#1F1F1F] bg-[#0A0A0A] p-6">

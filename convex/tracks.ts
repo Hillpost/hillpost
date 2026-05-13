@@ -172,3 +172,41 @@ export const unassignTeam = mutation({
     if (existing) await ctx.db.delete(existing._id);
   },
 });
+
+export const setMyTeamTrack = mutation({
+  args: {
+    hackathonId: v.id("hackathons"),
+    trackId: v.union(v.id("tracks"), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireAuthUserId(ctx);
+
+    const membership = await ctx.db
+      .query("hackathonMembers")
+      .withIndex("by_hackathonId_userId", (q) =>
+        q.eq("hackathonId", args.hackathonId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership || membership.role !== "competitor") {
+      throw new Error("Only competitors can set team tracks");
+    }
+    if (!membership.teamId) {
+      throw new Error("You must be on a team first");
+    }
+
+    const existing = await ctx.db
+      .query("teamTracks")
+      .withIndex("by_teamId", (q) => q.eq("teamId", membership.teamId!))
+      .collect();
+    await Promise.all(existing.map((tt) => ctx.db.delete(tt._id)));
+
+    if (args.trackId !== null) {
+      await ctx.db.insert("teamTracks", {
+        teamId: membership.teamId,
+        trackId: args.trackId,
+        hackathonId: args.hackathonId,
+      });
+    }
+  },
+});
