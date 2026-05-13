@@ -800,9 +800,7 @@ function TracksSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
   const [editDescription, setEditDescription] = useState("");
   const [expandedTrackId, setExpandedTrackId] = useState<Id<"tracks"> | null>(null);
 
-  if (!tracks || !teams) return <SectionSkeleton title="TRACKS" />;
-
-  const teamMap = new Map(teams.map((t) => [t._id as string, t.name]));
+  const teamMap = new Map((teams ?? []).map((t) => [t._id as string, t.name]));
 
   const handleAdd = async (e: FormEvent) => {
     e.preventDefault();
@@ -883,7 +881,9 @@ function TracksSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
         </form>
       )}
 
-      {tracks.length === 0 ? (
+      {!tracks ? (
+        <p className="text-xs text-[#555555] uppercase tracking-widest">▓▓▓░░░ LOADING...</p>
+      ) : tracks.length === 0 ? (
         <p className="text-xs text-[#555555] uppercase tracking-wider">NO TRACKS YET. ADD ONE TO CATEGORIZE TEAMS.</p>
       ) : (
         <div className="space-y-2">
@@ -927,7 +927,9 @@ function TracksSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
                   {expandedTrackId === track._id && (
                     <div className="border-t border-[#1F1F1F] p-3">
                       <p className="text-xs text-[#555555] uppercase tracking-widest mb-2">ASSIGN TEAMS</p>
-                      {teams.length === 0 ? (
+                      {!teams ? (
+                        <p className="text-xs text-[#333333] uppercase">LOADING TEAMS...</p>
+                      ) : teams.length === 0 ? (
                         <p className="text-xs text-[#333333] uppercase">NO TEAMS IN THIS HACKATHON YET.</p>
                       ) : (
                         <div className="flex flex-wrap gap-2">
