@@ -405,7 +405,7 @@ function ScoringForm({ submissionId, categories }: ScoringFormProps) {
   const getCurrentScore = (categoryId: Id<"categories">, maxScore: number) => {
     if (scores[categoryId] !== undefined) return scores[categoryId];
     const existing = getExistingScore(categoryId);
-    return existing?.score ?? Math.floor(maxScore / 2);
+    return existing?.score ?? Math.max(1, Math.floor(maxScore / 2));
   };
 
   const getCurrentFeedback = (categoryId: Id<"categories">) => {
@@ -485,7 +485,7 @@ function ScoringForm({ submissionId, categories }: ScoringFormProps) {
                 <div className="flex items-center gap-3 min-w-0">
                   <input
                     type="range"
-                    min={0}
+                    min={1}
                     max={cat.maxScore}
                     value={currentScore}
                     onChange={(e) => setScores({ ...scores, [cat._id]: Number(e.target.value) })}
@@ -493,10 +493,10 @@ function ScoringForm({ submissionId, categories }: ScoringFormProps) {
                   />
                   <input
                     type="number"
-                    min={0}
+                    min={1}
                     max={cat.maxScore}
                     value={currentScore}
-                    onChange={(e) => setScores({ ...scores, [cat._id]: Math.min(Number(e.target.value), cat.maxScore) })}
+                    onChange={(e) => setScores({ ...scores, [cat._id]: Math.max(1, Math.min(Number(e.target.value), cat.maxScore)) })}
                     className="w-16 border border-[#1F1F1F] bg-black px-2 py-1 text-center text-sm text-white focus:border-white focus:outline-none"
                   />
                 </div>

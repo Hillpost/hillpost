@@ -40,9 +40,9 @@ export const submit = mutation({
     if (!category) {
       throw new Error("Category not found");
     }
-    if (args.score < 0 || args.score > category.maxScore) {
+    if (args.score < 1 || args.score > category.maxScore) {
       throw new Error(
-        `Score must be between 0 and ${category.maxScore}`
+        `Score must be between 1 and ${category.maxScore}`
       );
     }
 
