@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar, ArrowLeft, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { getRequiredClerkDisplayName } from "@/lib/clerk-user";
+import { useDisplayNamePrompt } from "@/components/display-name-prompt";
 
 export default function JoinByLinkPage() {
   const params = useParams();
@@ -27,6 +27,7 @@ export default function JoinByLinkPage() {
   const joinHackathon = useMutation(api.hackathons.join);
 
   const [isJoining, setIsJoining] = useState(false);
+  const { requestDisplayName, displayNamePrompt } = useDisplayNamePrompt();
 
   const isMembershipLoading =
     hackathon !== undefined && hackathon !== null && isAuthenticated && membership === undefined;
@@ -72,9 +73,8 @@ export default function JoinByLinkPage() {
       toast.error("Please sign in first");
       return;
     }
-    const userName = getRequiredClerkDisplayName(user);
+    const userName = await requestDisplayName(user, { confirm: true });
     if (!userName) {
-      toast.error("Please enter your name to continue");
       return;
     }
     setIsJoining(true);
@@ -134,8 +134,9 @@ export default function JoinByLinkPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-16">
-      <div className="border border-[#1F1F1F] bg-[#0A0A0A] p-8">
+    <>
+      <div className="mx-auto max-w-md px-4 py-16">
+        <div className="border border-[#1F1F1F] bg-[#0A0A0A] p-8">
         <div className="mb-6">
           <div className="mb-2 text-xs text-[#555555] uppercase tracking-widest">
             JOINING EVENT: {joinCode.toUpperCase()}
@@ -191,7 +192,9 @@ export default function JoinByLinkPage() {
             Go to Dashboard instead
           </Link>
         </div>
+        </div>
       </div>
-    </div>
+      {displayNamePrompt}
+    </>
   );
 }

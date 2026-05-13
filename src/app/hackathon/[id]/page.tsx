@@ -6,7 +6,7 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import { useParams, useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
-import { getRequiredClerkDisplayName } from "@/lib/clerk-user";
+import { useDisplayNamePrompt } from "@/components/display-name-prompt";
 import { format } from "date-fns";
 import React, { useState } from "react";
 import Link from "next/link";
@@ -76,6 +76,7 @@ export default function HackathonDetailPage() {
   const [isJoiningPublic, setIsJoiningPublic] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const userId = user?.id;
+  const { requestDisplayName, displayNamePrompt } = useDisplayNamePrompt();
 
   React.useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
@@ -185,9 +186,8 @@ export default function HackathonDetailPage() {
       return;
     }
 
-    const userName = getRequiredClerkDisplayName(user);
+    const userName = await requestDisplayName(user, { confirm: true });
     if (!userName) {
-      toast.error("Please enter your name to continue");
       return;
     }
 
@@ -864,6 +864,7 @@ export default function HackathonDetailPage() {
       {activeTab === "judge" && (
         <JudgePanel hackathonId={hackathonId} hackathon={hackathon} />
       )}
+      {displayNamePrompt}
     </div>
   );
 }
