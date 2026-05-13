@@ -286,7 +286,7 @@ function HackathonInfoSection({
     if (!newStartDate || !newEndDate) return;
     const start = new Date(newStartDate).getTime();
     const end = new Date(newEndDate).getTime();
-    if (end <= start) { toast.error("End date must be after start date"); return; }
+    if (end < start) { toast.error("End date must be on or after start date"); return; }
     try {
       await updateHackathon({ hackathonId, startDate: start, endDate: end });
       toast.success("Dates updated");
