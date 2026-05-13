@@ -17,23 +17,30 @@ export function PublicSubmissions({ hackathonId, role }: PublicSubmissionsProps)
   const router = useRouter();
   const submissions = useQuery(api.submissions.list, { hackathonId });
   const teams = useQuery(api.teams.list, { hackathonId });
+  const tracks = useQuery(api.tracks.list, { hackathonId });
   const updateSubmissionOrganizer = useMutation(api.submissions.updateSubmissionOrganizer);
+  const setTeamTrackOrganizer = useMutation(api.tracks.setTeamTrackOrganizer);
 
   const [editingId, setEditingId] = useState<Id<"submissions"> | null>(null);
+  const [editTeamId, setEditTeamId] = useState<Id<"teams"> | null>(null);
   const [changelogId, setChangelogId] = useState<Id<"submissions"> | null>(null);
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editProjUrl, setEditProjUrl] = useState("");
   const [editDemoUrl, setEditDemoUrl] = useState("");
   const [editDeployedUrl, setEditDeployedUrl] = useState("");
+  const [editTrackId, setEditTrackId] = useState<Id<"tracks"> | null>(null);
 
-  const startEditing = (sub: { _id: Id<"submissions">; name: string; description: string; projectUrl: string; demoUrl?: string; deployedUrl?: string }) => {
+  const startEditing = (sub: { _id: Id<"submissions">; teamId: Id<"teams">; name: string; description: string; projectUrl: string; demoUrl?: string; deployedUrl?: string }) => {
     setEditingId(sub._id);
+    setEditTeamId(sub.teamId);
     setEditName(sub.name);
     setEditDesc(sub.description);
     setEditProjUrl(sub.projectUrl);
     setEditDemoUrl(sub.demoUrl || "");
     setEditDeployedUrl(sub.deployedUrl || "");
+    const currentTrack = tracks?.find((t) => t.teamIds.includes(sub.teamId));
+    setEditTrackId(currentTrack?._id ?? null);
   };
 
   const handleSave = async (submissionId: Id<"submissions">) => {
@@ -47,6 +54,9 @@ export function PublicSubmissions({ hackathonId, role }: PublicSubmissionsProps)
         demoUrl: editDemoUrl || undefined,
         deployedUrl: editDeployedUrl || undefined,
       });
+      if (editTeamId) {
+        await setTeamTrackOrganizer({ hackathonId, teamId: editTeamId, trackId: editTrackId });
+      }
       toast.success("Submission updated");
       setEditingId(null);
     } catch (error) {
@@ -302,6 +312,31 @@ export function PublicSubmissions({ hackathonId, role }: PublicSubmissionsProps)
                 className="tui-input mt-2"
               />
             </div>
+            {tracks && tracks.length > 0 && (
+              <div>
+                <label className="text-xs font-bold text-[#555555] uppercase tracking-widest">TRACK (OPTIONAL):</label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {tracks.map((track) => {
+                    const isSelected = editTrackId === track._id;
+                    return (
+                      <button
+                        key={track._id}
+                        type="button"
+                        onClick={() => setEditTrackId(isSelected ? null : track._id)}
+                        className={cn(
+                          "px-3 py-1.5 text-xs font-bold uppercase tracking-wider border transition-colors",
+                          isSelected
+                            ? "border-[#00B4FF] bg-[#00B4FF] text-black"
+                            : "border-[#1F1F1F] text-[#555555] hover:border-[#00B4FF] hover:text-[#00B4FF]"
+                        )}
+                      >
+                        {track.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="border-t border-[#1F1F1F] px-5 py-4 flex justify-end gap-2 shrink-0">

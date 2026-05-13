@@ -173,6 +173,32 @@ export const unassignTeam = mutation({
   },
 });
 
+export const setTeamTrackOrganizer = mutation({
+  args: {
+    hackathonId: v.id("hackathons"),
+    teamId: v.id("teams"),
+    trackId: v.union(v.id("tracks"), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireAuthUserId(ctx);
+    await verifyOrganizer(ctx, args.hackathonId, userId);
+
+    const existing = await ctx.db
+      .query("teamTracks")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+    await Promise.all(existing.map((tt) => ctx.db.delete(tt._id)));
+
+    if (args.trackId !== null) {
+      await ctx.db.insert("teamTracks", {
+        teamId: args.teamId,
+        trackId: args.trackId,
+        hackathonId: args.hackathonId,
+      });
+    }
+  },
+});
+
 export const setMyTeamTrack = mutation({
   args: {
     hackathonId: v.id("hackathons"),
