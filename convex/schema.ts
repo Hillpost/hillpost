@@ -15,7 +15,7 @@ export default defineSchema({
     openGraphImageUrl: v.optional(v.string()),
     isPublic: v.optional(v.boolean()),
     feedbackVisible: v.optional(v.boolean()),
-    scoresVisible: v.optional(v.boolean()),
+    scoresVisible: v.optional(v.union(v.boolean(), v.literal("all"), v.literal("judges"), v.literal("none"))),
     createdAt: v.number(),
   })
     .index("by_competitorJoinCode", ["competitorJoinCode"])

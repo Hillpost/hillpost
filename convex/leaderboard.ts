@@ -25,7 +25,7 @@ export const get = query({
 
     // Fetch userId and membership once; reuse for both access-gate and scores-visibility checks
     let userId: string | null = null;
-    let membership: { role: string } | null = null;
+    let membership: { role: string; status?: string } | null = null;
 
     if (!hackathon.isPublic) {
       // Private hackathon: must be authenticated and a member
@@ -41,9 +41,26 @@ export const get = query({
       }
     }
 
-    const scoresVisible = hackathon.scoresVisible !== false;
-    if (!scoresVisible) {
-      if (membership?.role === "competitor") {
+    // Normalise scoresVisible: old booleans → new string literals
+    const rawVisible = hackathon.scoresVisible;
+    const visibilityMode: "all" | "judges" | "none" =
+      rawVisible === false || rawVisible === "none"
+        ? "none"
+        : rawVisible === "judges"
+          ? "judges"
+          : "all"; // undefined, true, or "all"
+
+    if (visibilityMode === "none") {
+      // Only organizers can see
+      if (membership?.role !== "organizer") {
+        return { entries: [], maxPossibleScore: 0, tracks: [], leaderboardHidden: true as const };
+      }
+    } else if (visibilityMode === "judges") {
+      // Only organizers and approved judges can see judge-only leaderboards.
+      const canViewJudgeOnly =
+        membership?.role === "organizer" ||
+        (membership?.role === "judge" && membership.status === "approved");
+      if (!canViewJudgeOnly) {
         return { entries: [], maxPossibleScore: 0, tracks: [], leaderboardHidden: true as const };
       }
     }

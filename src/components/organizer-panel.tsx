@@ -20,6 +20,7 @@ import {
   GripVertical,
   Eye,
   EyeOff,
+  ChevronDown,
   Globe,
   Lock,
 } from "lucide-react";
@@ -41,7 +42,7 @@ interface OrganizerPanelProps {
     openGraphImageUrl?: string;
     isPublic?: boolean;
     feedbackVisible?: boolean;
-    scoresVisible?: boolean;
+    scoresVisible?: boolean | "all" | "judges" | "none";
   };
 }
 
@@ -195,16 +196,15 @@ function HackathonInfoSection({
     }
   };
 
-  const toggleScoresVisible = async () => {
-    const current = hackathon.scoresVisible !== false;
-    const nextScoresVisible = !current;
+  const setScoresVisibility = async (mode: "all" | "judges" | "none") => {
     try {
-      await updateHackathon({ hackathonId, scoresVisible: nextScoresVisible });
-      toast.success(
-        nextScoresVisible
-          ? "Scores shown to competitors"
-          : "Scores hidden from competitors (competitor feedback also hidden)"
-      );
+      await updateHackathon({ hackathonId, scoresVisible: mode });
+      const labels = {
+        all: "Scores visible to everyone",
+        judges: "Scores visible to judges only",
+        none: "Scores hidden from competitors and judges",
+      };
+      toast.success(labels[mode]);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update score visibility");
     }
@@ -505,11 +505,18 @@ function HackathonInfoSection({
         {/* Feedback visibility toggle */}
         {(() => {
           const feedbackPreferenceVisible = hackathon.feedbackVisible !== false;
-          const scoresVisible = hackathon.scoresVisible !== false;
-          const feedbackVisible = scoresVisible && feedbackPreferenceVisible;
+          const rawSV = hackathon.scoresVisible;
+          const scoresMode: "all" | "judges" | "none" =
+            rawSV === false || rawSV === "none"
+              ? "none"
+              : rawSV === "judges"
+                ? "judges"
+                : "all";
+          const scoresVisibleToAll = scoresMode === "all";
+          const feedbackVisible = scoresVisibleToAll && feedbackPreferenceVisible;
           let feedbackDescription = "Feedback is hidden from competitors (judges can still submit feedback)";
-          if (!scoresVisible) {
-            feedbackDescription = "Feedback is hidden from competitors while score sharing is disabled.";
+          if (!scoresVisibleToAll) {
+            feedbackDescription = "Feedback is hidden from competitors while score sharing is restricted.";
           } else if (feedbackVisible) {
             feedbackDescription = "Competitors can view judge feedback";
           }
@@ -521,7 +528,7 @@ function HackathonInfoSection({
               </div>
               <button
                 onClick={toggleFeedbackVisible}
-                disabled={!scoresVisible}
+                disabled={!scoresVisibleToAll}
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors disabled:cursor-not-allowed disabled:opacity-50",
                   feedbackVisible
@@ -539,34 +546,48 @@ function HackathonInfoSection({
           );
         })()}
 
-        {/* Score/leaderboard visibility toggle */}
+        {/* Score/leaderboard visibility selector */}
         {(() => {
-          const scoresVisible = hackathon.scoresVisible !== false;
+          const raw = hackathon.scoresVisible;
+          const currentMode: "all" | "judges" | "none" =
+            raw === false || raw === "none"
+              ? "none"
+              : raw === "judges"
+                ? "judges"
+                : "all";
+          const descriptions = {
+            all: "Everyone can view score breakdowns and leaderboard rankings",
+            judges: "Only judges and organizers can view scores and leaderboard",
+            none: "Scores and leaderboard are hidden from judges and competitors",
+          };
+          const modeColors = {
+            all: "border-[#00FF41] text-[#00FF41]",
+            judges: "border-[#00B4FF] text-[#00B4FF]",
+            none: "border-[#FF6600] text-[#FF6600]",
+          };
           return (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-[#1F1F1F] pt-4">
               <div>
-                <span className="text-xs font-bold text-[#555555] uppercase tracking-widest">COMPETITOR SCORES + LEADERBOARD:</span>
+                <span className="text-xs font-bold text-[#555555] uppercase tracking-widest">SCORES + LEADERBOARD VISIBILITY:</span>
                 <p className="text-xs text-[#333333] mt-0.5">
-                  {scoresVisible
-                    ? "Competitors can view score breakdowns and leaderboard rankings"
-                    : "Scores and leaderboard are hidden from competitors"}
+                  {descriptions[currentMode]}
                 </p>
               </div>
-              <button
-                onClick={toggleScoresVisible}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors",
-                  scoresVisible
-                    ? "border border-[#555555] text-[#555555] hover:border-[#FF6600] hover:text-[#FF6600]"
-                    : "border border-[#00FF41] text-[#00FF41] hover:bg-[#00FF41] hover:text-black"
-                )}
-              >
-                {scoresVisible ? (
-                  <><EyeOff className="h-3.5 w-3.5" /> [ HIDE ]</>
-                ) : (
-                  <><Eye className="h-3.5 w-3.5" /> [ SHOW ]</>
-                )}
-              </button>
+              <div className="relative">
+                <select
+                  value={currentMode}
+                  onChange={(e) => setScoresVisibility(e.target.value as "all" | "judges" | "none")}
+                  className={cn(
+                    "appearance-none cursor-pointer pl-3 pr-8 py-2 text-xs font-bold uppercase tracking-wider transition-colors bg-transparent border",
+                    modeColors[currentMode]
+                  )}
+                >
+                  <option value="all" className="bg-[#0A0A0A] text-[#00FF41] normal-case">All — Everyone</option>
+                  <option value="judges" className="bg-[#0A0A0A] text-[#00B4FF] normal-case">Judges Only</option>
+                  <option value="none" className="bg-[#0A0A0A] text-[#FF6600] normal-case">Hidden</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5" />
+              </div>
             </div>
           );
         })()}

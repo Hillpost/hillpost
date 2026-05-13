@@ -20,7 +20,7 @@ type PublicHackathon = {
   isActive: boolean;
   isPublic?: boolean;
   openGraphImageUrl?: string;
-  scoresVisible?: boolean;
+  scoresVisible?: boolean | "all" | "judges" | "none";
 };
 
 type PublicCategory = {
@@ -539,7 +539,7 @@ export function PublicHackathonLanding({
             </div>
 
             {/* Leaderboard link */}
-            {hackathon.scoresVisible !== false && status !== "upcoming" && (
+            {hackathon.scoresVisible !== false && hackathon.scoresVisible !== "none" && hackathon.scoresVisible !== "judges" && status !== "upcoming" && (
               <Link
                 href={`/hackathon/${hackathonId}/leaderboard`}
                 className="group mt-3 flex items-center justify-between border border-[#1F1F1F] bg-[#0A0A0A] px-5 py-4 transition-colors hover:border-[#FF6600]"

@@ -55,7 +55,7 @@ export default function LeaderboardPage() {
         <div className="border border-[#1F1F1F] bg-[#0A0A0A] p-8 text-center">
           <p className="text-sm text-[#555555] uppercase tracking-wider">LEADERBOARD HIDDEN</p>
           <p className="mt-2 text-xs text-[#333333] uppercase tracking-wide">
-            The organizer has disabled leaderboard visibility for competitors.
+            The organizer has hidden the leaderboard from you.
           </p>
         </div>
       </div>

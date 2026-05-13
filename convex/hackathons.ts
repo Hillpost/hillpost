@@ -303,7 +303,7 @@ export const update = mutation({
     openGraphImageUrl: v.optional(v.union(v.string(), v.null())),
     isPublic: v.optional(v.boolean()),
     feedbackVisible: v.optional(v.boolean()),
-    scoresVisible: v.optional(v.boolean()),
+    scoresVisible: v.optional(v.union(v.literal("all"), v.literal("judges"), v.literal("none"))),
   },
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);

@@ -119,7 +119,7 @@ export default function FeedbackPage() {
             FEEDBACK HIDDEN
           </p>
           <p className="mt-2 text-xs text-[#333333]">
-            The organizer has disabled feedback visibility for competitors.
+            The organizer has hidden feedback from you.
           </p>
           <button
             onClick={goBack}

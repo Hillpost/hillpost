@@ -113,7 +113,7 @@ export const getForSubmission = query({
     const userId = await getAuthUserId(ctx);
 
     // For private hackathons, require authentication and membership
-    let membership: { role: string } | null = null;
+    let membership: { role: string; status?: string } | null = null;
     if (!hackathon.isPublic) {
       if (!userId) return { scoresHidden: false as const, entries: [] };
       membership = await ctx.db
@@ -123,8 +123,8 @@ export const getForSubmission = query({
         )
         .first();
       if (!membership) return { scoresHidden: false as const, entries: [] };
-    } else if (userId && hackathon.scoresVisible === false) {
-      // Public hackathon with scores hidden: fetch membership only to gate competitors
+    } else if (userId && hackathon.scoresVisible !== undefined && hackathon.scoresVisible !== true && hackathon.scoresVisible !== "all") {
+      // Public hackathon with scores restricted: fetch membership to gate by role
       membership = await ctx.db
         .query("hackathonMembers")
         .withIndex("by_hackathonId_userId", (q) =>
@@ -133,9 +133,26 @@ export const getForSubmission = query({
         .first();
     }
 
-    const scoresVisible = hackathon.scoresVisible !== false;
-    if (!scoresVisible && membership?.role === "competitor") {
-      return { scoresHidden: true as const, entries: [] };
+    // Normalise scoresVisible: old booleans → new string literals
+    const rawVisible = hackathon.scoresVisible;
+    const visibilityMode: "all" | "judges" | "none" =
+      rawVisible === false || rawVisible === "none"
+        ? "none"
+        : rawVisible === "judges"
+          ? "judges"
+          : "all";
+
+    if (visibilityMode === "none") {
+      if (membership?.role !== "organizer") {
+        return { scoresHidden: true as const, entries: [] };
+      }
+    } else if (visibilityMode === "judges") {
+      const canViewJudgeOnly =
+        membership?.role === "organizer" ||
+        (membership?.role === "judge" && membership.status === "approved");
+      if (!canViewJudgeOnly) {
+        return { scoresHidden: true as const, entries: [] };
+      }
     }
 
     const currentIteration = submission?.submissionCount ?? 1;
@@ -260,10 +277,23 @@ export const getFeedbackForSubmission = query({
     // Fetch the hackathon to check feedbackVisible setting.
     const hackathon = await ctx.db.get(submission.hackathonId);
     const feedbackVisible = hackathon?.feedbackVisible !== false; // undefined defaults to true
-    const scoresVisible = hackathon?.scoresVisible !== false; // undefined defaults to true
+    // Normalise scoresVisible
+    const rawVisible = hackathon?.scoresVisible;
+    const visibilityMode: "all" | "judges" | "none" =
+      rawVisible === false || rawVisible === "none"
+        ? "none"
+        : rawVisible === "judges"
+          ? "judges"
+          : "all";
 
-    // Competitors do not receive any feedback data when either feedback or scores are hidden.
-    if ((!feedbackVisible || !scoresVisible) && !isOrganizer && !isJudge) {
+    // Competitors do not receive feedback when feedback is disabled or scores are not public.
+    if (!isOrganizer && !isJudge) {
+      if (!feedbackVisible || visibilityMode !== "all") {
+        return { feedbackHidden: true as const };
+      }
+    }
+    // Judges don't see feedback when visibility is "none"
+    if (isJudge && visibilityMode === "none") {
       return { feedbackHidden: true as const };
     }
 

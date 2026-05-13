@@ -243,7 +243,7 @@ export default function SubmissionDetailPage() {
             <div className="h-px flex-1 bg-[#1F1F1F]" />
           </div>
           <p className="text-xs text-[#333333] uppercase tracking-wide">
-            The organizer has hidden score visibility for competitors.
+            The organizer has hidden scores from you.
           </p>
         </div>
       )}
@@ -300,7 +300,7 @@ export default function SubmissionDetailPage() {
         (membership.role === "organizer" ||
           (membership.role === "competitor" &&
             hackathon?.feedbackVisible !== false &&
-            hackathon?.scoresVisible !== false &&
+            hackathon?.scoresVisible !== false && hackathon?.scoresVisible !== "none" && hackathon?.scoresVisible !== "judges" &&
             submission &&
             membership.teamId === submission.teamId)) && (
           <Link

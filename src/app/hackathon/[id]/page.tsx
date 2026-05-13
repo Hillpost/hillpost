@@ -261,7 +261,19 @@ export default function HackathonDetailPage() {
 
   const isCreator = user?.id === hackathon.organizerId;
   const isPublicHackathon = hackathon.isPublic === true;
-  const scoresVisibleToCompetitors = hackathon.scoresVisible !== false;
+  const rawScoresVisible = hackathon.scoresVisible;
+  const scoresMode: "all" | "judges" | "none" =
+    rawScoresVisible === false || rawScoresVisible === "none"
+      ? "none"
+      : rawScoresVisible === "judges"
+        ? "judges"
+        : "all";
+  const scoresVisibleToCompetitors = scoresMode === "all";
+  const isApprovedJudge = role === "judge" && membership?.status === "approved";
+  const canViewLeaderboard =
+    role === "organizer" ||
+    (role === "judge" && (scoresMode === "all" || (isApprovedJudge && scoresMode === "judges"))) ||
+    (role === "competitor" && scoresVisibleToCompetitors);
   const daysLeft = Math.max(0, Math.ceil((hackathon.endDate - now) / (1000 * 60 * 60 * 24)));
 
   const tabs: { id: Tab; label: string; show: boolean; badge?: number }[] = [
@@ -461,7 +473,7 @@ export default function HackathonDetailPage() {
           )}
 
           <div className="grid gap-4 md:grid-cols-2">
-            {(role === "organizer" || role === "judge" || (role === "competitor" && scoresVisibleToCompetitors)) && (
+            {canViewLeaderboard && (
               <Link
                 href={`/hackathon/${hackathonId}/leaderboard`}
                 className="group flex flex-col justify-center gap-4 border border-[#1F1F1F] bg-[#0A0A0A] p-6 transition-colors hover:border-[#FF6600]"
