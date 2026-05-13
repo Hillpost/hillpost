@@ -23,6 +23,60 @@ async function verifyOrganizer(
   }
 }
 
+async function requireTeamInHackathon(
+  ctx: MutationCtx,
+  teamId: Id<"teams">,
+  hackathonId: Id<"hackathons">
+) {
+  const team = await ctx.db.get(teamId);
+  if (!team || team.hackathonId !== hackathonId) {
+    throw new Error("Team not found");
+  }
+  return team;
+}
+
+async function requireTrackInHackathon(
+  ctx: MutationCtx,
+  trackId: Id<"tracks">,
+  hackathonId: Id<"hackathons">
+) {
+  const track = await ctx.db.get(trackId);
+  if (!track || track.hackathonId !== hackathonId) {
+    throw new Error("Track not found");
+  }
+  return track;
+}
+
+async function requireTracksInHackathon(
+  ctx: MutationCtx,
+  trackIds: Id<"tracks">[],
+  hackathonId: Id<"hackathons">
+) {
+  const uniqueTrackIds = [...new Set(trackIds)];
+  await Promise.all(
+    uniqueTrackIds.map((trackId) =>
+      requireTrackInHackathon(ctx, trackId, hackathonId)
+    )
+  );
+  return uniqueTrackIds;
+}
+
+async function deleteTeamTrackAssignments(
+  ctx: MutationCtx,
+  teamId: Id<"teams">,
+  hackathonId: Id<"hackathons">
+) {
+  const existing = await ctx.db
+    .query("teamTracks")
+    .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+    .collect();
+  await Promise.all(
+    existing
+      .filter((tt) => tt.hackathonId === hackathonId)
+      .map((tt) => ctx.db.delete(tt._id))
+  );
+}
+
 async function verifyMembership(
   ctx: QueryCtx,
   hackathonId: Id<"hackathons">,
@@ -135,6 +189,8 @@ export const assignTeam = mutation({
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
     await verifyOrganizer(ctx, args.hackathonId, userId);
+    await requireTeamInHackathon(ctx, args.teamId, args.hackathonId);
+    await requireTrackInHackathon(ctx, args.trackId, args.hackathonId);
 
     const existing = await ctx.db
       .query("teamTracks")
@@ -162,6 +218,7 @@ export const unassignTeam = mutation({
     const track = await ctx.db.get(args.trackId);
     if (!track) throw new Error("Track not found");
     await verifyOrganizer(ctx, track.hackathonId, userId);
+    await requireTeamInHackathon(ctx, args.teamId, track.hackathonId);
 
     const existing = await ctx.db
       .query("teamTracks")
@@ -182,12 +239,12 @@ export const setTeamTrackOrganizer = mutation({
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
     await verifyOrganizer(ctx, args.hackathonId, userId);
+    await requireTeamInHackathon(ctx, args.teamId, args.hackathonId);
+    if (args.trackId !== null) {
+      await requireTrackInHackathon(ctx, args.trackId, args.hackathonId);
+    }
 
-    const existing = await ctx.db
-      .query("teamTracks")
-      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
-      .collect();
-    await Promise.all(existing.map((tt) => ctx.db.delete(tt._id)));
+    await deleteTeamTrackAssignments(ctx, args.teamId, args.hackathonId);
 
     if (args.trackId !== null) {
       await ctx.db.insert("teamTracks", {
@@ -208,15 +265,17 @@ export const setTeamTracksOrganizer = mutation({
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
     await verifyOrganizer(ctx, args.hackathonId, userId);
+    await requireTeamInHackathon(ctx, args.teamId, args.hackathonId);
+    const uniqueTrackIds = await requireTracksInHackathon(
+      ctx,
+      args.trackIds,
+      args.hackathonId
+    );
 
-    const existing = await ctx.db
-      .query("teamTracks")
-      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
-      .collect();
-    await Promise.all(existing.map((tt) => ctx.db.delete(tt._id)));
+    await deleteTeamTrackAssignments(ctx, args.teamId, args.hackathonId);
 
     await Promise.all(
-      args.trackIds.map((trackId) =>
+      uniqueTrackIds.map((trackId) =>
         ctx.db.insert("teamTracks", {
           teamId: args.teamId,
           trackId,
@@ -248,12 +307,12 @@ export const setMyTeamTrack = mutation({
     if (!membership.teamId) {
       throw new Error("You must be on a team first");
     }
+    await requireTeamInHackathon(ctx, membership.teamId, args.hackathonId);
+    if (args.trackId !== null) {
+      await requireTrackInHackathon(ctx, args.trackId, args.hackathonId);
+    }
 
-    const existing = await ctx.db
-      .query("teamTracks")
-      .withIndex("by_teamId", (q) => q.eq("teamId", membership.teamId!))
-      .collect();
-    await Promise.all(existing.map((tt) => ctx.db.delete(tt._id)));
+    await deleteTeamTrackAssignments(ctx, membership.teamId, args.hackathonId);
 
     if (args.trackId !== null) {
       await ctx.db.insert("teamTracks", {
@@ -286,15 +345,17 @@ export const setMyTeamTracks = mutation({
     if (!membership.teamId) {
       throw new Error("You must be on a team first");
     }
+    await requireTeamInHackathon(ctx, membership.teamId, args.hackathonId);
+    const uniqueTrackIds = await requireTracksInHackathon(
+      ctx,
+      args.trackIds,
+      args.hackathonId
+    );
 
-    const existing = await ctx.db
-      .query("teamTracks")
-      .withIndex("by_teamId", (q) => q.eq("teamId", membership.teamId!))
-      .collect();
-    await Promise.all(existing.map((tt) => ctx.db.delete(tt._id)));
+    await deleteTeamTrackAssignments(ctx, membership.teamId, args.hackathonId);
 
     await Promise.all(
-      args.trackIds.map((trackId) =>
+      uniqueTrackIds.map((trackId) =>
         ctx.db.insert("teamTracks", {
           teamId: membership.teamId!,
           trackId,

@@ -183,77 +183,80 @@ export default function LeaderboardPage() {
               </tr>
             </thead>
             <tbody>
-              {leaderboard.map((entry) => (
-                <tr
-                  key={entry.teamId}
-                  className={cn(getRankRowClass(entry.rank))}
-                >
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "text-sm font-bold",
-                        entry.rank === 1
-                          ? "text-[#FF6600]"
-                          : entry.rank <= 3
-                            ? "text-white"
-                            : "text-[#555555]"
-                      )}
-                    >
-                      {getRankLabel(entry.rank)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-2">
+              {leaderboard.map((entry, index) => {
+                const displayRank = index + 1;
+                return (
+                  <tr
+                    key={entry.teamId}
+                    className={cn(getRankRowClass(displayRank))}
+                  >
+                    <td className="px-4 py-3">
                       <span
                         className={cn(
-                          "text-sm font-bold uppercase tracking-wide",
-                          entry.rank === 1
+                          "text-sm font-bold",
+                          displayRank === 1
                             ? "text-[#FF6600]"
-                            : entry.rank <= 3
+                            : displayRank <= 3
                               ? "text-white"
                               : "text-[#555555]"
                         )}
                       >
-                        {entry.teamName}
+                        {getRankLabel(displayRank)}
                       </span>
-                      {entry.tracks.map((track) => (
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span
-                          key={track._id as string}
-                          className="tui-badge border-[#00B4FF] text-[#00B4FF]"
+                          className={cn(
+                            "text-sm font-bold uppercase tracking-wide",
+                            displayRank === 1
+                              ? "text-[#FF6600]"
+                              : displayRank <= 3
+                                ? "text-white"
+                                : "text-[#555555]"
+                          )}
                         >
-                          {track.name}
+                          {entry.teamName}
                         </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={cn(
-                        "text-sm font-bold tabular-nums",
-                        entry.overallScore > 0
-                          ? entry.rank === 1 ? "text-[#FF6600]" : "text-[#00FF41]"
-                          : "text-[#333333]"
-                      )}
-                    >
-                      {entry.overallScore > 0
-                        ? `${entry.overallScore.toFixed(1)}/${maxPossibleScore}`
-                        : "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {entry.latestSubmission ? (
-                      <Link
-                        href={`/hackathon/${hackathonId}/submission/${entry.latestSubmission._id}`}
-                        className="inline-flex items-center gap-1 border border-[#1F1F1F] px-3 py-1 text-xs text-[#555555] uppercase tracking-wider transition-colors hover:border-white hover:text-white"
+                        {entry.tracks.map((track) => (
+                          <span
+                            key={track._id as string}
+                            className="tui-badge border-[#00B4FF] text-[#00B4FF]"
+                          >
+                            {track.name}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span
+                        className={cn(
+                          "text-sm font-bold tabular-nums",
+                          entry.overallScore > 0
+                            ? displayRank === 1 ? "text-[#FF6600]" : "text-[#00FF41]"
+                            : "text-[#333333]"
+                        )}
                       >
-                        VIEW →
-                      </Link>
-                    ) : (
-                      <span className="text-xs text-[#333333]">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                        {entry.overallScore > 0
+                          ? `${entry.overallScore.toFixed(1)}/${maxPossibleScore}`
+                          : "—"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {entry.latestSubmission ? (
+                        <Link
+                          href={`/hackathon/${hackathonId}/submission/${entry.latestSubmission._id}`}
+                          className="inline-flex items-center gap-1 border border-[#1F1F1F] px-3 py-1 text-xs text-[#555555] uppercase tracking-wider transition-colors hover:border-white hover:text-white"
+                        >
+                          VIEW →
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-[#333333]">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
