@@ -199,6 +199,34 @@ export const setTeamTrackOrganizer = mutation({
   },
 });
 
+export const setTeamTracksOrganizer = mutation({
+  args: {
+    hackathonId: v.id("hackathons"),
+    teamId: v.id("teams"),
+    trackIds: v.array(v.id("tracks")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireAuthUserId(ctx);
+    await verifyOrganizer(ctx, args.hackathonId, userId);
+
+    const existing = await ctx.db
+      .query("teamTracks")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+    await Promise.all(existing.map((tt) => ctx.db.delete(tt._id)));
+
+    await Promise.all(
+      args.trackIds.map((trackId) =>
+        ctx.db.insert("teamTracks", {
+          teamId: args.teamId,
+          trackId,
+          hackathonId: args.hackathonId,
+        })
+      )
+    );
+  },
+});
+
 export const setMyTeamTrack = mutation({
   args: {
     hackathonId: v.id("hackathons"),
@@ -234,5 +262,45 @@ export const setMyTeamTrack = mutation({
         hackathonId: args.hackathonId,
       });
     }
+  },
+});
+
+export const setMyTeamTracks = mutation({
+  args: {
+    hackathonId: v.id("hackathons"),
+    trackIds: v.array(v.id("tracks")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireAuthUserId(ctx);
+
+    const membership = await ctx.db
+      .query("hackathonMembers")
+      .withIndex("by_hackathonId_userId", (q) =>
+        q.eq("hackathonId", args.hackathonId).eq("userId", userId)
+      )
+      .first();
+
+    if (!membership || membership.role !== "competitor") {
+      throw new Error("Only competitors can set team tracks");
+    }
+    if (!membership.teamId) {
+      throw new Error("You must be on a team first");
+    }
+
+    const existing = await ctx.db
+      .query("teamTracks")
+      .withIndex("by_teamId", (q) => q.eq("teamId", membership.teamId!))
+      .collect();
+    await Promise.all(existing.map((tt) => ctx.db.delete(tt._id)));
+
+    await Promise.all(
+      args.trackIds.map((trackId) =>
+        ctx.db.insert("teamTracks", {
+          teamId: membership.teamId!,
+          trackId,
+          hackathonId: args.hackathonId,
+        })
+      )
+    );
   },
 });

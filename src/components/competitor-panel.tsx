@@ -35,21 +35,25 @@ function TeamSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
   const createTeam = useMutation(api.teams.create);
   const joinTeam = useMutation(api.teams.joinTeam);
   const leaveTeam = useMutation(api.teams.leaveTeam);
-  const setMyTeamTrack = useMutation(api.tracks.setMyTeamTrack);
+  const setMyTeamTracks = useMutation(api.tracks.setMyTeamTracks);
 
   const [teamName, setTeamName] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  const myTrack = myTeam && tracks
-    ? tracks.find((t) => t.teamIds.includes(myTeam._id))
-    : undefined;
+  const myTrackIds = myTeam && tracks
+    ? tracks.filter((t) => t.teamIds.includes(myTeam._id)).map((t) => t._id)
+    : [];
 
-  const handleSetTrack = async (trackId: Id<"tracks"> | null) => {
+  const handleToggleTrack = async (trackId: Id<"tracks">) => {
+    const isSelected = myTrackIds.includes(trackId);
+    const newTrackIds = isSelected
+      ? myTrackIds.filter((id) => id !== trackId)
+      : [...myTrackIds, trackId];
     try {
-      await setMyTeamTrack({ hackathonId, trackId });
-      toast.success(trackId ? "Track selected!" : "Track cleared");
+      await setMyTeamTracks({ hackathonId, trackIds: newTrackIds });
+      toast.success(isSelected ? "Track removed" : "Track added");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update track");
+      toast.error(error instanceof Error ? error.message : "Failed to update tracks");
     }
   };
 
@@ -115,14 +119,14 @@ function TeamSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
         </div>
         {tracks && tracks.length > 0 && (
           <div className="mt-4 border-t border-[#1F1F1F] pt-4">
-            <p className="mb-2 text-xs font-bold text-[#555555] uppercase tracking-widest">TRACK:</p>
+            <p className="mb-2 text-xs font-bold text-[#555555] uppercase tracking-widest">TRACKS:</p>
             <div className="flex flex-wrap gap-2">
               {tracks.map((track) => {
-                const isSelected = myTrack?._id === track._id;
+                const isSelected = myTrackIds.includes(track._id);
                 return (
                   <button
                     key={track._id}
-                    onClick={() => handleSetTrack(isSelected ? null : track._id)}
+                    onClick={() => handleToggleTrack(track._id)}
                     title={track.description}
                     className={cn(
                       "px-3 py-1.5 text-xs font-bold uppercase tracking-wider border transition-colors",

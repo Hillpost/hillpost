@@ -25,7 +25,7 @@ export default function SubmissionDetailPage() {
   const scores = useQuery(api.scores.getForSubmission, { submissionId });
   const tracks = useQuery(api.tracks.list, { hackathonId });
   const updateSubmissionOrganizer = useMutation(api.submissions.updateSubmissionOrganizer);
-  const setTeamTrackOrganizer = useMutation(api.tracks.setTeamTrackOrganizer);
+  const setTeamTracksOrganizer = useMutation(api.tracks.setTeamTracksOrganizer);
 
   const teamId = submission?.teamId;
   const team = useQuery(api.teams.get, teamId ? { teamId } : "skip");
@@ -36,11 +36,11 @@ export default function SubmissionDetailPage() {
   const [editProjUrl, setEditProjUrl] = useState("");
   const [editDemoUrl, setEditDemoUrl] = useState("");
   const [editDeployedUrl, setEditDeployedUrl] = useState("");
-  const [editTrackId, setEditTrackId] = useState<Id<"tracks"> | null>(null);
+  const [editTrackIds, setEditTrackIds] = useState<Id<"tracks">[]>([]);
 
-  const teamTrack = submission?.teamId && tracks
-    ? tracks.find((t) => t.teamIds.includes(submission.teamId))
-    : undefined;
+  const teamTracks = submission?.teamId && tracks
+    ? tracks.filter((t) => t.teamIds.includes(submission.teamId))
+    : [];
 
   const startEditing = () => {
     if (!submission) return;
@@ -49,8 +49,10 @@ export default function SubmissionDetailPage() {
     setEditProjUrl(submission.projectUrl);
     setEditDemoUrl(submission.demoUrl || "");
     setEditDeployedUrl(submission.deployedUrl || "");
-    const currentTrack = tracks?.find((t) => t.teamIds.includes(submission.teamId));
-    setEditTrackId(currentTrack?._id ?? null);
+    const currentTrackIds = tracks
+      ?.filter((t) => t.teamIds.includes(submission.teamId))
+      .map((t) => t._id) ?? [];
+    setEditTrackIds(currentTrackIds);
     setIsEditing(true);
   };
 
@@ -66,7 +68,7 @@ export default function SubmissionDetailPage() {
         deployedUrl: editDeployedUrl || undefined,
       });
       if (submission.teamId) {
-        await setTeamTrackOrganizer({ hackathonId, teamId: submission.teamId, trackId: editTrackId });
+        await setTeamTracksOrganizer({ hackathonId, teamId: submission.teamId, trackIds: editTrackIds });
       }
       toast.success("Submission updated");
       setIsEditing(false);
@@ -141,12 +143,12 @@ export default function SubmissionDetailPage() {
               {submission.submissionCount > 1 && (
                 <span className="tui-badge border-[#00B4FF] text-[#00B4FF] whitespace-nowrap">v{submission.submissionCount}</span>
               )}
-              {teamTrack && (
-                <span className="tui-badge border-[#FF6600] text-[#FF6600] whitespace-nowrap flex items-center gap-1">
+              {teamTracks.map((tt) => (
+                <span key={tt._id} className="tui-badge border-[#FF6600] text-[#FF6600] whitespace-nowrap flex items-center gap-1">
                   <Tag className="h-2.5 w-2.5" />
-                  {teamTrack.name}
+                  {tt.name}
                 </span>
-              )}
+              ))}
             </div>
             <p className="text-xs text-[#555555]">
               Submitted {format(new Date(submission.submittedAt), "MMM d, yyyy 'at' h:mm a")}
@@ -419,15 +421,18 @@ export default function SubmissionDetailPage() {
             </div>
             {tracks && tracks.length > 0 && (
               <div>
-                <label className="text-xs font-bold text-[#555555] uppercase tracking-widest">TRACK (OPTIONAL):</label>
+                <label className="text-xs font-bold text-[#555555] uppercase tracking-widest">TRACKS (OPTIONAL):</label>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {tracks.map((track) => {
-                    const isSelected = editTrackId === track._id;
+                    const isSelected = editTrackIds.includes(track._id);
                     return (
                       <button
                         key={track._id}
                         type="button"
-                        onClick={() => setEditTrackId(isSelected ? null : track._id)}
+                        onClick={() => setEditTrackIds(isSelected
+                          ? editTrackIds.filter((id) => id !== track._id)
+                          : [...editTrackIds, track._id]
+                        )}
                         className={cn(
                           "px-3 py-1.5 text-xs font-bold uppercase tracking-wider border transition-colors",
                           isSelected
