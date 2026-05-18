@@ -72,7 +72,11 @@ async function requireOrganizerMembership(
       q.eq("hackathonId", hackathonId).eq("userId", userId)
     )
     .first();
-  if (!membership || membership.role !== "organizer") {
+  if (
+    !membership ||
+    membership.role !== "organizer" ||
+    membership.status !== "approved"
+  ) {
     throw new Error("Only organizers can manage hackathons");
   }
 }
