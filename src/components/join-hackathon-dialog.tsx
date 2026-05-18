@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { X } from "lucide-react";
-import { getClerkDisplayName } from "@/lib/clerk-user";
+import { useDisplayNamePrompt } from "@/components/display-name-prompt";
 
 interface JoinHackathonDialogProps {
   isOpen: boolean;
@@ -22,6 +22,7 @@ export function JoinHackathonDialog({ isOpen, onClose }: JoinHackathonDialogProp
 
   const [joinCode, setJoinCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { requestDisplayName, displayNamePrompt } = useDisplayNamePrompt();
 
   if (!isOpen) return null;
 
@@ -35,11 +36,15 @@ export function JoinHackathonDialog({ isOpen, onClose }: JoinHackathonDialogProp
       toast.error("Please sign in first");
       return;
     }
+    const userName = await requestDisplayName(user, { confirm: true });
+    if (!userName) {
+      return;
+    }
     setIsSubmitting(true);
     try {
       const result = await joinHackathon({
         joinCode: joinCode.trim(),
-        userName: getClerkDisplayName(user),
+        userName,
         userImageUrl: user?.imageUrl,
       });
       if (result.alreadyMember) {
@@ -59,9 +64,10 @@ export function JoinHackathonDialog({ isOpen, onClose }: JoinHackathonDialogProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/80" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md border border-[#1F1F1F] bg-black p-6 shadow-2xl">
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/80" onClick={onClose} />
+        <div className="relative z-10 w-full max-w-md border border-[#1F1F1F] bg-black p-6 shadow-2xl">
         <div className="mb-6 flex items-center justify-between border-b border-[#1F1F1F] pb-4">
           <div>
             <div className="text-xs text-[#555555] uppercase tracking-widest mb-1">── JOIN EVENT</div>
@@ -111,7 +117,9 @@ export function JoinHackathonDialog({ isOpen, onClose }: JoinHackathonDialogProp
             </button>
           </div>
         </form>
+        </div>
       </div>
-    </div>
+      {displayNamePrompt}
+    </>
   );
 }

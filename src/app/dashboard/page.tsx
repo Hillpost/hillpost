@@ -181,7 +181,7 @@ export default function DashboardPage() {
                   ) : (
                     <span className="flex items-center gap-1 text-xs text-[#555555] uppercase tracking-widest">
                       <span className="h-1.5 w-1.5 bg-[#555555] inline-block" />
-                      [○ CLOSED]
+                      [CLOSED]
                     </span>
                   )}
                 </div>

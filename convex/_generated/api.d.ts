@@ -18,6 +18,7 @@ import type * as scores from "../scores.js";
 import type * as sponsors from "../sponsors.js";
 import type * as submissions from "../submissions.js";
 import type * as teams from "../teams.js";
+import type * as tracks from "../tracks.js";
 
 import type {
   ApiFromModules,
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   sponsors: typeof sponsors;
   submissions: typeof submissions;
   teams: typeof teams;
+  tracks: typeof tracks;
 }>;
 
 /**

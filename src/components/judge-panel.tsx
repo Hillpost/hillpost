@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -15,6 +15,8 @@ import {
   MessageSquare,
   History,
   X,
+  Search,
+  Tag,
 } from "lucide-react";
 import { PanelSkeleton } from "@/components/skeleton";
 
@@ -37,29 +39,46 @@ export function JudgePanel({ hackathonId, hackathon }: JudgePanelProps) {
   const submissions = useQuery(api.submissions.list, { hackathonId });
   const categories = useQuery(api.categories.list, { hackathonId });
   const teams = useQuery(api.teams.list, { hackathonId });
+  const tracks = useQuery(api.tracks.list, { hackathonId });
   const membership = useQuery(api.members.getMyMembership, { hackathonId });
   const [expandedId, setExpandedId] = useState<Id<"submissions"> | null>(null);
   const [changelogId, setChangelogId] = useState<Id<"submissions"> | null>(null);
   const [view, setView] = useState<"pending" | "judged">("pending");
+  const [search, setSearch] = useState("");
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
 
   const teamMap = new Map(teams?.map((t) => [t._id, t.name]) ?? []);
 
-  const displayedSubmissions = submissions
-    ? submissions
-        .filter((sub) => {
-          if (!user?.id) return false;
-          const hasJudged = sub.judgedBy?.includes(user.id) ?? false;
-          return view === "pending" ? !hasJudged : hasJudged;
-        })
-        .map((sub) => ({
-          sub,
-          submittedAt: getSubmissionTime(sub.submittedAt),
-        }))
-        .sort((a, b) => a.submittedAt - b.submittedAt)
-        .map(({ sub }) => sub)
-    : [];
+  const trackTeamIds = useMemo(() => {
+    if (!selectedTrackId || !tracks) return null;
+    const track = tracks.find((t) => (t._id as string) === selectedTrackId);
+    return track ? new Set(track.teamIds.map((id) => id as string)) : new Set<string>();
+  }, [selectedTrackId, tracks]);
 
-  if (membership === undefined || submissions === undefined || categories === undefined || teams === undefined || isLoading || user === undefined) {
+  const displayedSubmissions = useMemo(() => {
+    if (!submissions) return [];
+    const localTeamMap = new Map(teams?.map((t) => [t._id, t.name]) ?? []);
+    return submissions
+      .filter((sub) => {
+        if (!user?.id) return false;
+        const hasJudged = sub.judgedBy?.includes(user.id) ?? false;
+        if (view === "pending" ? hasJudged : !hasJudged) return false;
+        if (search.trim()) {
+          const teamName = localTeamMap.get(sub.teamId) ?? "";
+          if (!teamName.toLowerCase().includes(search.trim().toLowerCase()) &&
+              !sub.name.toLowerCase().includes(search.trim().toLowerCase())) {
+            return false;
+          }
+        }
+        if (trackTeamIds !== null && !trackTeamIds.has(sub.teamId as string)) return false;
+        return true;
+      })
+      .map((sub) => ({ sub, submittedAt: getSubmissionTime(sub.submittedAt) }))
+      .sort((a, b) => a.submittedAt - b.submittedAt)
+      .map(({ sub }) => sub);
+  }, [submissions, teams, user?.id, view, search, trackTeamIds]);
+
+  if (membership === undefined || submissions === undefined || categories === undefined || teams === undefined || tracks === undefined || isLoading || user === undefined) {
     return <PanelSkeleton />;
   }
 
@@ -109,6 +128,52 @@ export function JudgePanel({ hackathonId, hackathon }: JudgePanelProps) {
           </div>
         </div>
 
+        <div className="mb-3 flex items-center gap-2 border border-[#1F1F1F] bg-[#111111] px-3 py-2">
+          <Search className="h-3.5 w-3.5 text-[#555555] shrink-0" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search teams or projects..."
+            className="flex-1 bg-transparent text-xs text-white placeholder:text-[#333333] outline-none uppercase tracking-wider"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="text-[#555555] hover:text-white transition-colors">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        {tracks.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setSelectedTrackId(null)}
+              className={cn(
+                "px-2.5 py-1 text-xs font-bold uppercase tracking-wider border transition-colors",
+                selectedTrackId === null
+                  ? "border-white text-white bg-white/10"
+                  : "border-[#1F1F1F] text-[#555555] hover:border-white hover:text-white"
+              )}
+            >
+              ALL
+            </button>
+            {tracks.map((track) => (
+              <button
+                key={track._id as string}
+                onClick={() => setSelectedTrackId((track._id as string) === selectedTrackId ? null : (track._id as string))}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-bold uppercase tracking-wider border transition-colors",
+                  selectedTrackId === (track._id as string)
+                    ? "border-[#00B4FF] text-[#00B4FF] bg-[#00B4FF]/10"
+                    : "border-[#1F1F1F] text-[#555555] hover:border-[#00B4FF] hover:text-[#00B4FF]"
+                )}
+              >
+                {track.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="mb-4 flex gap-0 border border-[#1F1F1F]">
           <button
             onClick={() => { setView("pending"); setExpandedId(null); }}
@@ -142,6 +207,7 @@ export function JudgePanel({ hackathonId, hackathon }: JudgePanelProps) {
               const projectHref = safeHref(sub.projectUrl);
               const demoHref = safeHref(sub.demoUrl);
               const deployedHref = safeHref(sub.deployedUrl);
+              const subTracks = tracks.filter((t) => t.teamIds.includes(sub.teamId));
               return (
               <div key={sub._id} className="border border-[#1F1F1F] bg-[#111111]">
                 <button
@@ -159,6 +225,12 @@ export function JudgePanel({ hackathonId, hackathon }: JudgePanelProps) {
                           v{sub.submissionCount}
                         </span>
                       )}
+                      {subTracks.map((st) => (
+                        <span key={st._id} className="tui-badge border-[#FF6600] text-[#FF6600] flex items-center gap-1">
+                          <Tag className="h-2.5 w-2.5" />
+                          {st.name}
+                        </span>
+                      ))}
                     </div>
                     <p className="text-xs text-[#555555]">{sub.description}</p>
                     {sub.submissionCount > 1 && sub.changelog && sub.changelog.length > 0 && (() => {
@@ -333,7 +405,7 @@ function ScoringForm({ submissionId, categories }: ScoringFormProps) {
   const getCurrentScore = (categoryId: Id<"categories">, maxScore: number) => {
     if (scores[categoryId] !== undefined) return scores[categoryId];
     const existing = getExistingScore(categoryId);
-    return existing?.score ?? Math.floor(maxScore / 2);
+    return existing?.score ?? Math.max(1, Math.floor(maxScore / 2));
   };
 
   const getCurrentFeedback = (categoryId: Id<"categories">) => {
@@ -413,7 +485,7 @@ function ScoringForm({ submissionId, categories }: ScoringFormProps) {
                 <div className="flex items-center gap-3 min-w-0">
                   <input
                     type="range"
-                    min={0}
+                    min={1}
                     max={cat.maxScore}
                     value={currentScore}
                     onChange={(e) => setScores({ ...scores, [cat._id]: Number(e.target.value) })}
@@ -421,10 +493,10 @@ function ScoringForm({ submissionId, categories }: ScoringFormProps) {
                   />
                   <input
                     type="number"
-                    min={0}
+                    min={1}
                     max={cat.maxScore}
                     value={currentScore}
-                    onChange={(e) => setScores({ ...scores, [cat._id]: Math.min(Number(e.target.value), cat.maxScore) })}
+                    onChange={(e) => setScores({ ...scores, [cat._id]: Math.max(1, Math.min(Number(e.target.value), cat.maxScore)) })}
                     className="w-16 border border-[#1F1F1F] bg-black px-2 py-1 text-center text-sm text-white focus:border-white focus:outline-none"
                   />
                 </div>

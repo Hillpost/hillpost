@@ -15,7 +15,7 @@ export default defineSchema({
     openGraphImageUrl: v.optional(v.string()),
     isPublic: v.optional(v.boolean()),
     feedbackVisible: v.optional(v.boolean()),
-    scoresVisible: v.optional(v.boolean()),
+    scoresVisible: v.optional(v.union(v.boolean(), v.literal("all"), v.literal("judges"), v.literal("none"))),
     createdAt: v.number(),
   })
     .index("by_competitorJoinCode", ["competitorJoinCode"])
@@ -100,6 +100,23 @@ export default defineSchema({
       "judgeId",
     ])
     .index("by_judgeId", ["judgeId"]),
+
+  tracks: defineTable({
+    hackathonId: v.id("hackathons"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_hackathonId", ["hackathonId"]),
+
+  teamTracks: defineTable({
+    teamId: v.id("teams"),
+    trackId: v.id("tracks"),
+    hackathonId: v.id("hackathons"),
+  })
+    .index("by_hackathonId", ["hackathonId"])
+    .index("by_teamId", ["teamId"])
+    .index("by_trackId", ["trackId"])
+    .index("by_teamId_trackId", ["teamId", "trackId"]),
 
   sponsors: defineTable({
     hackathonId: v.id("hackathons"),

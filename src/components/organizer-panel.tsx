@@ -21,6 +21,7 @@ import {
   GripVertical,
   Eye,
   EyeOff,
+  ChevronDown,
   Globe,
   Lock,
 } from "lucide-react";
@@ -42,7 +43,7 @@ interface OrganizerPanelProps {
     openGraphImageUrl?: string;
     isPublic?: boolean;
     feedbackVisible?: boolean;
-    scoresVisible?: boolean;
+    scoresVisible?: boolean | "all" | "judges" | "none";
   };
 }
 
@@ -76,6 +77,7 @@ export function OrganizerPanel({
       <HackathonInfoSection hackathonId={hackathonId} hackathon={hackathon} />
       <PendingApprovalsSection hackathonId={hackathonId} />
       <CategoriesSection hackathonId={hackathonId} />
+      <TracksSection hackathonId={hackathonId} />
       <SponsorsSection hackathonId={hackathonId} />
       <TeamsAndProjectsSection hackathonId={hackathonId} />
       <MembersSection hackathonId={hackathonId} />
@@ -198,16 +200,15 @@ function HackathonInfoSection({
     }
   };
 
-  const toggleScoresVisible = async () => {
-    const current = hackathon.scoresVisible !== false;
-    const nextScoresVisible = !current;
+  const setScoresVisibility = async (mode: "all" | "judges" | "none") => {
     try {
-      await updateHackathon({ hackathonId, scoresVisible: nextScoresVisible });
-      toast.success(
-        nextScoresVisible
-          ? "Scores shown to competitors"
-          : "Scores hidden from competitors (competitor feedback also hidden)"
-      );
+      await updateHackathon({ hackathonId, scoresVisible: mode });
+      const labels = {
+        all: "Scores visible to everyone",
+        judges: "Scores visible to judges only",
+        none: "Scores hidden from competitors and judges",
+      };
+      toast.success(labels[mode]);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update score visibility");
     }
@@ -289,7 +290,7 @@ function HackathonInfoSection({
     if (!newStartDate || !newEndDate) return;
     const start = new Date(newStartDate).getTime();
     const end = new Date(newEndDate).getTime();
-    if (end <= start) { toast.error("End date must be after start date"); return; }
+    if (end < start) { toast.error("End date must be on or after start date"); return; }
     try {
       await updateHackathon({ hackathonId, startDate: start, endDate: end });
       toast.success("Dates updated");
@@ -526,11 +527,18 @@ function HackathonInfoSection({
         {/* Feedback visibility toggle */}
         {(() => {
           const feedbackPreferenceVisible = hackathon.feedbackVisible !== false;
-          const scoresVisible = hackathon.scoresVisible !== false;
-          const feedbackVisible = scoresVisible && feedbackPreferenceVisible;
+          const rawSV = hackathon.scoresVisible;
+          const scoresMode: "all" | "judges" | "none" =
+            rawSV === false || rawSV === "none"
+              ? "none"
+              : rawSV === "judges"
+                ? "judges"
+                : "all";
+          const scoresVisibleToAll = scoresMode === "all";
+          const feedbackVisible = scoresVisibleToAll && feedbackPreferenceVisible;
           let feedbackDescription = "Feedback is hidden from competitors (judges can still submit feedback)";
-          if (!scoresVisible) {
-            feedbackDescription = "Feedback is hidden from competitors while score sharing is disabled.";
+          if (!scoresVisibleToAll) {
+            feedbackDescription = "Feedback is hidden from competitors while score sharing is restricted.";
           } else if (feedbackVisible) {
             feedbackDescription = "Competitors can view judge feedback";
           }
@@ -542,7 +550,7 @@ function HackathonInfoSection({
               </div>
               <button
                 onClick={toggleFeedbackVisible}
-                disabled={!scoresVisible}
+                disabled={!scoresVisibleToAll}
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors disabled:cursor-not-allowed disabled:opacity-50",
                   feedbackVisible
@@ -560,34 +568,48 @@ function HackathonInfoSection({
           );
         })()}
 
-        {/* Score/leaderboard visibility toggle */}
+        {/* Score/leaderboard visibility selector */}
         {(() => {
-          const scoresVisible = hackathon.scoresVisible !== false;
+          const raw = hackathon.scoresVisible;
+          const currentMode: "all" | "judges" | "none" =
+            raw === false || raw === "none"
+              ? "none"
+              : raw === "judges"
+                ? "judges"
+                : "all";
+          const descriptions = {
+            all: "Everyone can view score breakdowns and leaderboard rankings",
+            judges: "Only judges and organizers can view scores and leaderboard",
+            none: "Scores and leaderboard are hidden from judges and competitors",
+          };
+          const modeColors = {
+            all: "border-[#00FF41] text-[#00FF41]",
+            judges: "border-[#00B4FF] text-[#00B4FF]",
+            none: "border-[#FF6600] text-[#FF6600]",
+          };
           return (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-[#1F1F1F] pt-4">
               <div>
-                <span className="text-xs font-bold text-[#555555] uppercase tracking-widest">COMPETITOR SCORES + LEADERBOARD:</span>
+                <span className="text-xs font-bold text-[#555555] uppercase tracking-widest">SCORES + LEADERBOARD VISIBILITY:</span>
                 <p className="text-xs text-[#333333] mt-0.5">
-                  {scoresVisible
-                    ? "Competitors can view score breakdowns and leaderboard rankings"
-                    : "Scores and leaderboard are hidden from competitors"}
+                  {descriptions[currentMode]}
                 </p>
               </div>
-              <button
-                onClick={toggleScoresVisible}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors",
-                  scoresVisible
-                    ? "border border-[#555555] text-[#555555] hover:border-[#FF6600] hover:text-[#FF6600]"
-                    : "border border-[#00FF41] text-[#00FF41] hover:bg-[#00FF41] hover:text-black"
-                )}
-              >
-                {scoresVisible ? (
-                  <><EyeOff className="h-3.5 w-3.5" /> [ HIDE ]</>
-                ) : (
-                  <><Eye className="h-3.5 w-3.5" /> [ SHOW ]</>
-                )}
-              </button>
+              <div className="relative">
+                <select
+                  value={currentMode}
+                  onChange={(e) => setScoresVisibility(e.target.value as "all" | "judges" | "none")}
+                  className={cn(
+                    "appearance-none cursor-pointer pl-3 pr-8 py-2 text-xs font-bold uppercase tracking-wider transition-colors bg-transparent border",
+                    modeColors[currentMode]
+                  )}
+                >
+                  <option value="all" className="bg-[#0A0A0A] text-[#00FF41] normal-case">All — Everyone</option>
+                  <option value="judges" className="bg-[#0A0A0A] text-[#00B4FF] normal-case">Judges Only</option>
+                  <option value="none" className="bg-[#0A0A0A] text-[#FF6600] normal-case">Hidden</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5" />
+              </div>
             </div>
           );
         })()}
@@ -813,6 +835,187 @@ function CategoriesSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TracksSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
+  const tracks = useQuery(api.tracks.list, { hackathonId });
+  const teams = useQuery(api.teams.list, { hackathonId });
+  const createTrack = useMutation(api.tracks.create);
+  const updateTrack = useMutation(api.tracks.update);
+  const removeTrack = useMutation(api.tracks.remove);
+  const assignTeam = useMutation(api.tracks.assignTeam);
+  const unassignTeam = useMutation(api.tracks.unassignTeam);
+
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<Id<"tracks"> | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [expandedTrackId, setExpandedTrackId] = useState<Id<"tracks"> | null>(null);
+
+  const teamMap = new Map((teams ?? []).map((t) => [t._id as string, t.name]));
+
+  const handleAdd = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    try {
+      await createTrack({ hackathonId, name: newName.trim(), description: newDescription.trim() || undefined });
+      toast.success("Track added");
+      setNewName(""); setNewDescription(""); setShowAddForm(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add track");
+    }
+  };
+
+  const handleEdit = async (trackId: Id<"tracks">) => {
+    try {
+      await updateTrack({ trackId, name: editName.trim(), description: editDescription.trim() || undefined });
+      toast.success("Track updated");
+      setEditingId(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update track");
+    }
+  };
+
+  const handleRemove = async (trackId: Id<"tracks">) => {
+    try {
+      await removeTrack({ trackId });
+      toast.success("Track removed");
+      if (expandedTrackId === trackId) setExpandedTrackId(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove track");
+    }
+  };
+
+  const handleToggleTeam = async (track: { _id: Id<"tracks">; teamIds: Id<"teams">[] }, teamId: Id<"teams">) => {
+    try {
+      if ((track.teamIds as string[]).includes(teamId as string)) {
+        await unassignTeam({ trackId: track._id, teamId });
+      } else {
+        await assignTeam({ trackId: track._id, teamId, hackathonId });
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update team assignment");
+    }
+  };
+
+  return (
+    <div className="border border-[#1F1F1F] bg-[#0A0A0A] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <span className="text-xs text-[#555555] uppercase tracking-widest">── TRACKS</span>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="flex items-center gap-1 border border-[#1F1F1F] px-3 py-1.5 text-xs text-[#555555] uppercase tracking-wider hover:border-[#00FF41] hover:text-[#00FF41] transition-colors"
+        >
+          {showAddForm ? "[ CANCEL ]" : "[ + ADD ]"}
+        </button>
+      </div>
+
+      {showAddForm && (
+        <form onSubmit={handleAdd} className="mb-4 space-y-2 border border-[#1F1F1F] bg-[#111111] p-4">
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Track name (e.g. AI Project)"
+            className="tui-input"
+            required
+          />
+          <input
+            type="text"
+            value={newDescription}
+            onChange={(e) => setNewDescription(e.target.value)}
+            placeholder="Description (optional)"
+            className="tui-input"
+          />
+          <button type="submit" className="px-4 py-1.5 text-xs font-bold text-black bg-[#00FF41] uppercase tracking-wider hover:bg-white transition-colors">
+            [ ADD TRACK ]
+          </button>
+        </form>
+      )}
+
+      {!tracks ? (
+        <p className="text-xs text-[#555555] uppercase tracking-widest">▓▓▓░░░ LOADING...</p>
+      ) : tracks.length === 0 ? (
+        <p className="text-xs text-[#555555] uppercase tracking-wider">NO TRACKS YET. ADD ONE TO CATEGORIZE TEAMS.</p>
+      ) : (
+        <div className="space-y-2">
+          {tracks.map((track) => (
+            <div key={track._id as string} className="border border-[#1F1F1F] bg-[#111111]">
+              {editingId === track._id ? (
+                <div className="space-y-2 p-3">
+                  <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="tui-input" />
+                  <input type="text" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Description (optional)" className="tui-input" />
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEdit(track._id)} className="px-3 py-1 text-xs font-bold text-black bg-[#00FF41] uppercase tracking-wider hover:bg-white transition-colors">SAVE</button>
+                    <button onClick={() => setEditingId(null)} className="px-3 py-1 text-xs text-[#555555] border border-[#1F1F1F] uppercase tracking-wider hover:border-white hover:text-white transition-colors">CANCEL</button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between p-3">
+                    <button
+                      onClick={() => setExpandedTrackId(expandedTrackId === track._id ? null : track._id)}
+                      className="flex-1 text-left"
+                    >
+                      <p className="text-sm font-bold text-white uppercase tracking-wide">{track.name}</p>
+                      {track.description && <p className="text-xs text-[#555555]">{track.description}</p>}
+                      <p className="text-xs text-[#333333] uppercase tracking-wider mt-0.5">
+                        {track.teamIds.length} {track.teamIds.length === 1 ? "TEAM" : "TEAMS"} ASSIGNED
+                      </p>
+                    </button>
+                    <div className="flex gap-1 shrink-0">
+                      <button
+                        onClick={() => { setEditingId(track._id); setEditName(track.name); setEditDescription(track.description ?? ""); }}
+                        className="p-1.5 text-[#555555] hover:text-white transition-colors"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => handleRemove(track._id)} className="p-1.5 text-[#555555] hover:text-red-400 transition-colors">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {expandedTrackId === track._id && (
+                    <div className="border-t border-[#1F1F1F] p-3">
+                      <p className="text-xs text-[#555555] uppercase tracking-widest mb-2">ASSIGN TEAMS</p>
+                      {!teams ? (
+                        <p className="text-xs text-[#333333] uppercase">LOADING TEAMS...</p>
+                      ) : teams.length === 0 ? (
+                        <p className="text-xs text-[#333333] uppercase">NO TEAMS IN THIS HACKATHON YET.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {teams.map((team) => {
+                            const assigned = (track.teamIds as string[]).includes(team._id as string);
+                            return (
+                              <button
+                                key={team._id as string}
+                                onClick={() => handleToggleTeam(track, team._id)}
+                                className={cn(
+                                  "px-2.5 py-1 text-xs font-bold uppercase tracking-wider border transition-colors",
+                                  assigned
+                                    ? "border-[#00FF41] text-[#00FF41] bg-[#00FF41]/10"
+                                    : "border-[#1F1F1F] text-[#555555] hover:border-white hover:text-white"
+                                )}
+                              >
+                                {assigned ? "✓ " : ""}{teamMap.get(team._id as string) ?? team.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
