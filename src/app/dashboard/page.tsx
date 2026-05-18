@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -31,7 +31,12 @@ export default function DashboardPage() {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
-  const [now] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (!isLoaded) {
     return (
@@ -180,7 +185,7 @@ export default function DashboardPage() {
                     {isLive ? (
                       <span className="flex items-center gap-1 text-xs text-[#00FF41] uppercase tracking-widest">
                         <span className="status-pulse h-1.5 w-1.5 bg-[#00FF41] inline-block" />
-                        [LiVE]
+                        [LIVE]
                       </span>
                     ) : isUpcoming ? (
                       <span className="flex items-center gap-1 text-xs text-[#00B4FF] uppercase tracking-widest">

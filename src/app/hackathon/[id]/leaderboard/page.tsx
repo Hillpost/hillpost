@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function LeaderboardPage() {
   const params = useParams();
@@ -17,7 +17,12 @@ export default function LeaderboardPage() {
   const leaderboardData = useQuery(api.leaderboard.get, { hackathonId });
   const membership = useQuery(api.members.getMyMembership, { hackathonId });
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
-  const [now] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (hackathon === undefined || leaderboardData === undefined || membership === undefined) {
     return (
@@ -125,7 +130,7 @@ export default function LeaderboardPage() {
           {isLive && (
             <span className="flex items-center gap-2 text-xs text-[#00FF41] uppercase tracking-widest border border-[#00FF41]/30 px-3 py-1.5">
               <span className="status-pulse h-1.5 w-1.5 bg-[#00FF41] inline-block" />
-              [LiVE]
+              [LIVE]
             </span>
           )}
         </div>

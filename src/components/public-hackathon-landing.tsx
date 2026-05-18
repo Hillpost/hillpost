@@ -7,7 +7,7 @@ import { SignInButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { isSafeHttpUrl } from "@/lib/url";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Id } from "../../convex/_generated/dataModel";
 
 // ─── Prop types ───────────────────────────────────────────────────────────────
@@ -135,7 +135,11 @@ export function PublicHackathonLanding({
   sponsors,
   publicJudges,
 }: PublicHackathonLandingProps) {
-  const [now] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30 * 1000);
+    return () => clearInterval(interval);
+  }, []);
   const status = getEventStatus(hackathon.startDate, hackathon.endDate, now);
   const isOpen = status !== "ended";
   const countdown = getCountdownLabel(hackathon.startDate, hackathon.endDate, status, now);
