@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { requireAuthUserId, getAuthUserId, getAuthUserName } from "./auth";
 
 function sanitizeDisplayName(name: string | undefined): string | undefined {
@@ -57,6 +59,26 @@ function stripJoinCodes<T extends { competitorJoinCode: string; judgeJoinCode: s
   delete sanitized.competitorJoinCode;
   delete sanitized.judgeJoinCode;
   return sanitized as Omit<T, "competitorJoinCode" | "judgeJoinCode">;
+}
+
+async function requireOrganizerMembership(
+  ctx: MutationCtx,
+  hackathonId: Id<"hackathons">,
+  userId: string
+) {
+  const membership = await ctx.db
+    .query("hackathonMembers")
+    .withIndex("by_hackathonId_userId", (q) =>
+      q.eq("hackathonId", hackathonId).eq("userId", userId)
+    )
+    .first();
+  if (
+    !membership ||
+    membership.role !== "organizer" ||
+    membership.status !== "approved"
+  ) {
+    throw new Error("Only organizers can manage hackathons");
+  }
 }
 
 export const create = mutation({
@@ -313,16 +335,7 @@ export const update = mutation({
       throw new Error("Hackathon not found");
     }
 
-    // Verify organizer role
-    const membership = await ctx.db
-      .query("hackathonMembers")
-      .withIndex("by_hackathonId_userId", (q) =>
-        q.eq("hackathonId", args.hackathonId).eq("userId", userId)
-      )
-      .first();
-    if (!membership || membership.role !== "organizer") {
-      throw new Error("Only organizers can update hackathons");
-    }
+    await requireOrganizerMembership(ctx, args.hackathonId, userId);
 
     const sanitizedOpenGraphImageUrl =
       args.openGraphImageUrl === undefined
@@ -353,6 +366,67 @@ export const update = mutation({
       ...(args.scoresVisible !== undefined && { scoresVisible: args.scoresVisible }),
     });
     return args.hackathonId;
+  },
+});
+
+export const remove = mutation({
+  args: {
+    hackathonId: v.id("hackathons"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireAuthUserId(ctx);
+
+    const hackathon = await ctx.db.get(args.hackathonId);
+    if (!hackathon) {
+      throw new Error("Hackathon not found");
+    }
+
+    await requireOrganizerMembership(ctx, args.hackathonId, userId);
+
+    const submissions = await ctx.db
+      .query("submissions")
+      .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
+      .collect();
+
+    const scoresBySubmission = await Promise.all(
+      submissions.map((submission) =>
+        ctx.db
+          .query("scores")
+          .withIndex("by_submissionId", (q) => q.eq("submissionId", submission._id))
+          .collect()
+      )
+    );
+    const scoreIds = scoresBySubmission.flat().map((score) => score._id);
+    await Promise.all(scoreIds.map((scoreId) => ctx.db.delete(scoreId)));
+    await Promise.all(submissions.map((submission) => ctx.db.delete(submission._id)));
+
+    const [teams, categories, sponsors, members] = await Promise.all([
+      ctx.db
+        .query("teams")
+        .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
+        .collect(),
+      ctx.db
+        .query("categories")
+        .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
+        .collect(),
+      ctx.db
+        .query("sponsors")
+        .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
+        .collect(),
+      ctx.db
+        .query("hackathonMembers")
+        .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
+        .collect(),
+    ]);
+
+    await Promise.all([
+      ...teams.map((team) => ctx.db.delete(team._id)),
+      ...categories.map((category) => ctx.db.delete(category._id)),
+      ...sponsors.map((sponsor) => ctx.db.delete(sponsor._id)),
+      ...members.map((member) => ctx.db.delete(member._id)),
+    ]);
+
+    await ctx.db.delete(args.hackathonId);
   },
 });
 
