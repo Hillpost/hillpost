@@ -274,6 +274,7 @@ export default function HackathonDetailPage() {
     role === "organizer" ||
     (role === "judge" && (scoresMode === "all" || (isApprovedJudge && scoresMode === "judges"))) ||
     (role === "competitor" && scoresVisibleToCompetitors);
+  const isLive = now >= hackathon.startDate && now < hackathon.endDate;
   const daysLeft = Math.max(0, Math.ceil((hackathon.endDate - now) / (1000 * 60 * 60 * 24)));
 
   const tabs: { id: Tab; label: string; show: boolean; badge?: number }[] = [
@@ -330,7 +331,7 @@ export default function HackathonDetailPage() {
             <h1 className="text-2xl font-bold text-white uppercase tracking-wide">{hackathon.name}</h1>
           </div>
           <div className="flex flex-row items-center gap-2 sm:flex-col sm:items-end">
-            {hackathon.isActive ? (
+            {isLive ? (
               <span className="flex items-center gap-2 text-xs text-[#00FF41] uppercase tracking-widest border border-[#00FF41]/30 px-2.5 py-1">
                 <span className="status-pulse h-1.5 w-1.5 bg-[#00FF41] inline-block" />
                 [ ACTIVE ]

@@ -7,6 +7,7 @@ import { SignInButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { isSafeHttpUrl } from "@/lib/url";
+import { useState } from "react";
 import type { Id } from "../../convex/_generated/dataModel";
 
 // ─── Prop types ───────────────────────────────────────────────────────────────
@@ -61,10 +62,9 @@ type EventStatus = "live" | "upcoming" | "ended";
 function getEventStatus(
   startDate: number,
   endDate: number,
-  isActive: boolean,
   now: number
 ): EventStatus {
-  if (!isActive || now > endDate) return "ended";
+  if (now > endDate) return "ended";
   if (now < startDate) return "upcoming";
   return "live";
 }
@@ -135,8 +135,8 @@ export function PublicHackathonLanding({
   sponsors,
   publicJudges,
 }: PublicHackathonLandingProps) {
-  const now = Date.now();
-  const status = getEventStatus(hackathon.startDate, hackathon.endDate, hackathon.isActive, now);
+  const [now] = useState(() => Date.now());
+  const status = getEventStatus(hackathon.startDate, hackathon.endDate, now);
   const isOpen = status !== "ended";
   const countdown = getCountdownLabel(hackathon.startDate, hackathon.endDate, status, now);
   const totalPoints = categories?.reduce((sum, c) => sum + c.maxScore, 0) ?? 0;

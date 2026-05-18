@@ -17,6 +17,7 @@ export default function LeaderboardPage() {
   const leaderboardData = useQuery(api.leaderboard.get, { hackathonId });
   const membership = useQuery(api.members.getMyMembership, { hackathonId });
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [now] = useState(() => Date.now());
 
   if (hackathon === undefined || leaderboardData === undefined || membership === undefined) {
     return (
@@ -83,6 +84,7 @@ export default function LeaderboardPage() {
   };
 
   const { entries: allEntries, maxPossibleScore, tracks } = leaderboardData;
+  const isLive = now >= hackathon.startDate && now < hackathon.endDate;
   const leaderboard = selectedTrackId
     ? allEntries.filter((e) => e.tracks.some((t) => (t._id as string) === selectedTrackId))
     : allEntries;
@@ -120,7 +122,7 @@ export default function LeaderboardPage() {
               </>
             )}
           </div>
-          {hackathon.isActive && (
+          {isLive && (
             <span className="flex items-center gap-2 text-xs text-[#00FF41] uppercase tracking-widest border border-[#00FF41]/30 px-3 py-1.5">
               <span className="status-pulse h-1.5 w-1.5 bg-[#00FF41] inline-block" />
               [LiVE]
