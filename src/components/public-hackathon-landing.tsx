@@ -18,6 +18,7 @@ type PublicHackathon = {
   description: string;
   startDate: number;
   submissionsStartDate?: number;
+  submissionsEndDate?: number;
   endDate: number;
   isActive: boolean;
   isPublic?: boolean;
@@ -172,8 +173,8 @@ export function PublicHackathonLanding({
                 {hackathon.name}
               </h1>
               <p className="mt-3 max-w-xl text-sm text-white/60">
-                {format(new Date(hackathon.startDate), "MMMM d")} –{" "}
-                {format(new Date(hackathon.endDate), "MMMM d, yyyy")}
+                {format(new Date(hackathon.startDate), "MMMM d, yyyy h:mm a")} –{" "}
+                {format(new Date(hackathon.endDate), "MMMM d, yyyy h:mm a")}
                 &nbsp;·&nbsp;Public event
               </p>
               {isOpen && (
@@ -206,8 +207,8 @@ export function PublicHackathonLanding({
               {hackathon.name}
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#777777]">
-              {format(new Date(hackathon.startDate), "MMMM d")} –{" "}
-              {format(new Date(hackathon.endDate), "MMMM d, yyyy")}
+              {format(new Date(hackathon.startDate), "MMMM d, yyyy h:mm a")} –{" "}
+              {format(new Date(hackathon.endDate), "MMMM d, yyyy h:mm a")}
               &nbsp;·&nbsp;Public &amp; free to enter
             </p>
             {isOpen && (
@@ -262,7 +263,7 @@ export function PublicHackathonLanding({
                     },
                     {
                       label: "Hacking begins",
-                      date: format(new Date(hackathon.startDate), "EEEE, MMMM d, yyyy"),
+                      date: format(new Date(hackathon.startDate), "EEEE, MMMM d, yyyy h:mm a"),
                       done: now >= hackathon.startDate,
                       accent: "#00B4FF",
                       active: false,
@@ -270,7 +271,7 @@ export function PublicHackathonLanding({
                     ...(hackathon.submissionsStartDate && hackathon.submissionsStartDate !== hackathon.startDate
                       ? [{
                           label: "Submissions open",
-                          date: format(new Date(hackathon.submissionsStartDate), "EEEE, MMMM d, yyyy"),
+                          date: format(new Date(hackathon.submissionsStartDate), "EEEE, MMMM d, yyyy h:mm a"),
                           done: now >= hackathon.submissionsStartDate,
                           accent: "#00FF41",
                           active: now >= hackathon.startDate && now < hackathon.submissionsStartDate,
@@ -278,11 +279,22 @@ export function PublicHackathonLanding({
                       : []),
                     {
                       label: "Submissions close",
-                      date: format(new Date(hackathon.endDate), "EEEE, MMMM d, yyyy"),
-                      done: now >= hackathon.endDate,
+                      date: format(new Date(hackathon.submissionsEndDate ?? hackathon.endDate), "EEEE, MMMM d, yyyy h:mm a"),
+                      done: now >= (hackathon.submissionsEndDate ?? hackathon.endDate),
                       accent: "#FF6600",
-                      active: false,
+                      active:
+                        now >= (hackathon.submissionsStartDate ?? hackathon.startDate) &&
+                        now < (hackathon.submissionsEndDate ?? hackathon.endDate),
                     },
+                    ...(hackathon.submissionsEndDate && hackathon.submissionsEndDate !== hackathon.endDate
+                      ? [{
+                          label: "Event ends",
+                          date: format(new Date(hackathon.endDate), "EEEE, MMMM d, yyyy h:mm a"),
+                          done: now >= hackathon.endDate,
+                          accent: "#FF6600",
+                          active: false,
+                        }]
+                      : []),
                   ].map(({ label, date, done, accent, active }) => (
                     <li key={label} className="relative flex items-start gap-4">
                       {/* Dot */}
@@ -536,12 +548,17 @@ export function PublicHackathonLanding({
 
               <div className="mt-4 border-t border-[#1F1F1F] pt-4 space-y-3">
                 <StatRow icon={<Clock className="h-3.5 w-3.5" />} label="Date">
-                  {format(new Date(hackathon.startDate), "MMM d")} –{" "}
-                  {format(new Date(hackathon.endDate), "MMM d, yyyy")}
+                  {format(new Date(hackathon.startDate), "MMM d, yyyy h:mm a")} –{" "}
+                  {format(new Date(hackathon.endDate), "MMM d, yyyy h:mm a")}
                 </StatRow>
                 {hackathon.submissionsStartDate && hackathon.submissionsStartDate !== hackathon.startDate && (
                   <StatRow icon={<Clock className="h-3.5 w-3.5" />} label="Submissions open">
-                    {format(new Date(hackathon.submissionsStartDate), "MMM d, yyyy")}
+                    {format(new Date(hackathon.submissionsStartDate), "MMM d, yyyy h:mm a")}
+                  </StatRow>
+                )}
+                {hackathon.submissionsEndDate && hackathon.submissionsEndDate !== hackathon.endDate && (
+                  <StatRow icon={<Clock className="h-3.5 w-3.5" />} label="Submissions close">
+                    {format(new Date(hackathon.submissionsEndDate), "MMM d, yyyy h:mm a")}
                   </StatRow>
                 )}
                 {(categories?.length ?? 0) > 0 && (

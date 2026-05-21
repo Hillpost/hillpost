@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { QrCodeButton } from "@/components/qr-code-overlay";
 import { PanelSkeleton, SectionSkeleton } from "@/components/skeleton";
-import { parseDateInputToTimestamp } from "@/lib/date-input";
+import { formatDateTimeForInput, parseDateTimeInputToTimestamp } from "@/lib/date-input";
 
 interface OrganizerPanelProps {
   hackathonId: Id<"hackathons">;
@@ -39,6 +39,7 @@ interface OrganizerPanelProps {
     judgeJoinCode: string | undefined;
     startDate: number;
     submissionsStartDate?: number;
+    submissionsEndDate?: number;
     endDate: number;
     isActive: boolean;
     submissionFrequencyMinutes: number;
@@ -112,15 +113,20 @@ function HackathonInfoSection({
 
   const [isEditingDates, setIsEditingDates] = useState(false);
   const [newStartDate, setNewStartDate] = useState(
-    format(new Date(hackathon.startDate), "yyyy-MM-dd")
+    formatDateTimeForInput(new Date(hackathon.startDate))
   );
   const [newSubmissionsStartDate, setNewSubmissionsStartDate] = useState(
     hackathon.submissionsStartDate
-      ? format(new Date(hackathon.submissionsStartDate), "yyyy-MM-dd")
+      ? formatDateTimeForInput(new Date(hackathon.submissionsStartDate))
+      : ""
+  );
+  const [newSubmissionsEndDate, setNewSubmissionsEndDate] = useState(
+    hackathon.submissionsEndDate
+      ? formatDateTimeForInput(new Date(hackathon.submissionsEndDate))
       : ""
   );
   const [newEndDate, setNewEndDate] = useState(
-    format(new Date(hackathon.endDate), "yyyy-MM-dd")
+    formatDateTimeForInput(new Date(hackathon.endDate))
   );
 
   const [isEditingCooldown, setIsEditingCooldown] = useState(false);
@@ -286,21 +292,33 @@ function HackathonInfoSection({
 
   const saveDates = async () => {
     if (!newStartDate || !newEndDate) return;
-    const start = parseDateInputToTimestamp(newStartDate);
-    const end = parseDateInputToTimestamp(newEndDate);
-    if (end < start) { toast.error("End date must be on or after start date"); return; }
+    const start = parseDateTimeInputToTimestamp(newStartDate);
+    const end = parseDateTimeInputToTimestamp(newEndDate);
+    if (end < start) { toast.error("End date/time must be on or after start date/time"); return; }
     const submissionsStart = newSubmissionsStartDate
-      ? parseDateInputToTimestamp(newSubmissionsStartDate)
-      : undefined;
-    if (submissionsStart !== undefined && submissionsStart > end) {
-      toast.error("Submissions cannot open after hackathon ends");
+      ? parseDateTimeInputToTimestamp(newSubmissionsStartDate)
+      : start;
+    const submissionsEnd = newSubmissionsEndDate
+      ? parseDateTimeInputToTimestamp(newSubmissionsEndDate)
+      : end;
+    if (submissionsStart < start) {
+      toast.error("Submissions cannot open before hackathon starts");
+      return;
+    }
+    if (submissionsEnd > end) {
+      toast.error("Submissions cannot close after hackathon ends");
+      return;
+    }
+    if (submissionsStart > submissionsEnd) {
+      toast.error("Submissions cannot close before they open");
       return;
     }
     try {
       await updateHackathon({
         hackathonId,
         startDate: start,
-        submissionsStartDate: submissionsStart ?? start,
+        submissionsStartDate: submissionsStart,
+        submissionsEndDate: submissionsEnd,
         endDate: end,
       });
       toast.success("Dates updated");
@@ -430,15 +448,19 @@ function HackathonInfoSection({
             <div className="mt-2 flex flex-wrap items-end gap-3">
               <div className="space-y-1">
                 <label className="text-xs text-[#333333] uppercase">Start</label>
-                <input type="date" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)} className="tui-input w-auto" />
+                <input type="datetime-local" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)} className="tui-input w-auto" />
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-[#333333] uppercase">Submissions Open</label>
-                <input type="date" value={newSubmissionsStartDate} onChange={(e) => setNewSubmissionsStartDate(e.target.value)} className="tui-input w-auto" placeholder="Same as start" />
+                <input type="datetime-local" value={newSubmissionsStartDate} onChange={(e) => setNewSubmissionsStartDate(e.target.value)} className="tui-input w-auto" placeholder="Same as start" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-[#333333] uppercase">Submissions Close</label>
+                <input type="datetime-local" value={newSubmissionsEndDate} onChange={(e) => setNewSubmissionsEndDate(e.target.value)} className="tui-input w-auto" placeholder="Same as end" />
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-[#333333] uppercase">End</label>
-                <input type="date" value={newEndDate} onChange={(e) => setNewEndDate(e.target.value)} className="tui-input w-auto" />
+                <input type="datetime-local" value={newEndDate} onChange={(e) => setNewEndDate(e.target.value)} className="tui-input w-auto" />
               </div>
               <div className="flex gap-2">
                 <button onClick={saveDates} className="px-3 py-1.5 text-xs font-bold text-black bg-[#00FF41] uppercase tracking-wider hover:bg-white transition-colors">SAVE</button>
@@ -449,15 +471,20 @@ function HackathonInfoSection({
             <div className="mt-1 flex items-start gap-3">
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs text-white">
-                  {format(new Date(hackathon.startDate), "MMM d, yyyy")} — {format(new Date(hackathon.endDate), "MMM d, yyyy")}
+                  {format(new Date(hackathon.startDate), "MMM d, yyyy h:mm a")} — {format(new Date(hackathon.endDate), "MMM d, yyyy h:mm a")}
                 </span>
                 {hackathon.submissionsStartDate && hackathon.submissionsStartDate !== hackathon.startDate && (
                   <span className="text-xs text-[#555555]">
-                    Submissions open: {format(new Date(hackathon.submissionsStartDate), "MMM d, yyyy")}
+                    Submissions open: {format(new Date(hackathon.submissionsStartDate), "MMM d, yyyy h:mm a")}
+                  </span>
+                )}
+                {hackathon.submissionsEndDate && hackathon.submissionsEndDate !== hackathon.endDate && (
+                  <span className="text-xs text-[#555555]">
+                    Submissions close: {format(new Date(hackathon.submissionsEndDate), "MMM d, yyyy h:mm a")}
                   </span>
                 )}
               </div>
-              <button onClick={() => { setNewStartDate(format(new Date(hackathon.startDate), "yyyy-MM-dd")); setNewSubmissionsStartDate(hackathon.submissionsStartDate ? format(new Date(hackathon.submissionsStartDate), "yyyy-MM-dd") : ""); setNewEndDate(format(new Date(hackathon.endDate), "yyyy-MM-dd")); setIsEditingDates(true); }} className="p-1.5 text-[#555555] hover:text-white transition-colors">
+              <button onClick={() => { setNewStartDate(formatDateTimeForInput(new Date(hackathon.startDate))); setNewSubmissionsStartDate(hackathon.submissionsStartDate ? formatDateTimeForInput(new Date(hackathon.submissionsStartDate)) : ""); setNewSubmissionsEndDate(hackathon.submissionsEndDate ? formatDateTimeForInput(new Date(hackathon.submissionsEndDate)) : ""); setNewEndDate(formatDateTimeForInput(new Date(hackathon.endDate))); setIsEditingDates(true); }} className="p-1.5 text-[#555555] hover:text-white transition-colors">
                 <Pencil className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -507,7 +534,7 @@ function HackathonInfoSection({
           <div>
             <label className="text-xs font-bold text-[#555555] uppercase tracking-widest">STATUS:</label>
             <p className="text-xs text-[#333333] mt-0.5">
-              Event runs from {format(new Date(hackathon.startDate), "MMM d, yyyy")} to {format(new Date(hackathon.endDate), "MMM d, yyyy")}.
+              Event runs from {format(new Date(hackathon.startDate), "MMM d, yyyy h:mm a")} to {format(new Date(hackathon.endDate), "MMM d, yyyy h:mm a")}.
             </p>
             <p className="text-xs text-[#333333] mt-0.5">
               Status is automatically based on start and end dates.

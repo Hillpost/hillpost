@@ -358,13 +358,19 @@ export default function HackathonDetailPage() {
         <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-[#555555]">
           <span className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
-            {format(new Date(hackathon.startDate), "MMM d, yyyy")} —{" "}
-            {format(new Date(hackathon.endDate), "MMM d, yyyy")}
+            {format(new Date(hackathon.startDate), "MMM d, yyyy h:mm a")} —{" "}
+            {format(new Date(hackathon.endDate), "MMM d, yyyy h:mm a")}
           </span>
           {hackathon.submissionsStartDate && hackathon.submissionsStartDate !== hackathon.startDate && (
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              Submissions open {format(new Date(hackathon.submissionsStartDate), "MMM d, yyyy")}
+              Submissions open {format(new Date(hackathon.submissionsStartDate), "MMM d, yyyy h:mm a")}
+            </span>
+          )}
+          {hackathon.submissionsEndDate && hackathon.submissionsEndDate !== hackathon.endDate && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              Submissions close {format(new Date(hackathon.submissionsEndDate), "MMM d, yyyy h:mm a")}
             </span>
           )}
           <span className="flex items-center gap-1">

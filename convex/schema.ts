@@ -8,6 +8,7 @@ export default defineSchema({
     organizerId: v.string(),
     startDate: v.number(),
     submissionsStartDate: v.optional(v.number()),
+    submissionsEndDate: v.optional(v.number()),
     endDate: v.number(),
     submissionFrequencyMinutes: v.number(),
     isActive: v.boolean(),

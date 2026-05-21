@@ -52,6 +52,26 @@ function sanitizeUrl(url: string): string | null {
   }
 }
 
+function validateSubmissionWindow(args: {
+  startDate: number;
+  submissionsStartDate: number;
+  submissionsEndDate: number;
+  endDate: number;
+}) {
+  if (args.endDate < args.startDate) {
+    throw new Error("End date must be on or after start date");
+  }
+  if (args.submissionsStartDate < args.startDate) {
+    throw new Error("Submissions cannot open before the hackathon starts");
+  }
+  if (args.submissionsEndDate > args.endDate) {
+    throw new Error("Submissions cannot close after the hackathon ends");
+  }
+  if (args.submissionsStartDate > args.submissionsEndDate) {
+    throw new Error("Submissions cannot close before they open");
+  }
+}
+
 function stripJoinCodes<T extends { competitorJoinCode: string; judgeJoinCode: string }>(
   hackathon: T
 ): Omit<T, "competitorJoinCode" | "judgeJoinCode"> {
@@ -87,6 +107,7 @@ export const create = mutation({
     description: v.string(),
     startDate: v.number(),
     submissionsStartDate: v.optional(v.number()),
+    submissionsEndDate: v.optional(v.number()),
     endDate: v.number(),
     submissionFrequencyMinutes: v.optional(v.number()),
     openGraphImageUrl: v.optional(v.string()),
@@ -146,13 +167,23 @@ export const create = mutation({
       throw new Error("Banner image URL must be a valid http(s) URL");
     }
 
+    const submissionsStartDate = args.submissionsStartDate ?? args.startDate;
+    const submissionsEndDate = args.submissionsEndDate ?? args.endDate;
+    validateSubmissionWindow({
+      startDate: args.startDate,
+      submissionsStartDate,
+      submissionsEndDate,
+      endDate: args.endDate,
+    });
+
     const now = Date.now();
     const hackathonId = await ctx.db.insert("hackathons", {
       name: args.name,
       description: args.description,
       organizerId: userId,
       startDate: args.startDate,
-      submissionsStartDate: args.submissionsStartDate ?? args.startDate,
+      submissionsStartDate,
+      submissionsEndDate,
       endDate: args.endDate,
       submissionFrequencyMinutes: args.submissionFrequencyMinutes ?? 60,
       isActive: true,
@@ -322,6 +353,7 @@ export const update = mutation({
     description: v.optional(v.string()),
     startDate: v.optional(v.number()),
     submissionsStartDate: v.optional(v.number()),
+    submissionsEndDate: v.optional(v.number()),
     endDate: v.optional(v.number()),
     submissionFrequencyMinutes: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
@@ -351,11 +383,25 @@ export const update = mutation({
       throw new Error("Invalid openGraphImageUrl");
     }
 
+    const nextStartDate = args.startDate ?? hackathon.startDate;
+    const nextEndDate = args.endDate ?? hackathon.endDate;
+    const nextSubmissionsStartDate =
+      args.submissionsStartDate ?? hackathon.submissionsStartDate ?? nextStartDate;
+    const nextSubmissionsEndDate =
+      args.submissionsEndDate ?? hackathon.submissionsEndDate ?? nextEndDate;
+    validateSubmissionWindow({
+      startDate: nextStartDate,
+      submissionsStartDate: nextSubmissionsStartDate,
+      submissionsEndDate: nextSubmissionsEndDate,
+      endDate: nextEndDate,
+    });
+
     await ctx.db.patch(args.hackathonId, {
       ...(args.name !== undefined && { name: args.name }),
       ...(args.description !== undefined && { description: args.description }),
       ...(args.startDate !== undefined && { startDate: args.startDate }),
       ...(args.submissionsStartDate !== undefined && { submissionsStartDate: args.submissionsStartDate }),
+      ...(args.submissionsEndDate !== undefined && { submissionsEndDate: args.submissionsEndDate }),
       ...(args.endDate !== undefined && { endDate: args.endDate }),
       ...(args.submissionFrequencyMinutes !== undefined && {
         submissionFrequencyMinutes: args.submissionFrequencyMinutes,

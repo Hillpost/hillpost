@@ -126,8 +126,12 @@ export const create = mutation({
 
     // Check if submissions are open yet
     const submissionsOpenAt = hackathon.submissionsStartDate ?? hackathon.startDate;
+    const submissionsCloseAt = hackathon.submissionsEndDate ?? hackathon.endDate;
     if (Date.now() < submissionsOpenAt) {
       throw new Error("Submissions are not open yet");
+    }
+    if (Date.now() > submissionsCloseAt) {
+      throw new Error("Submissions are closed");
     }
 
     const existingSubmission = await ctx.db
