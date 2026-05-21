@@ -23,7 +23,17 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
   const { isAuthenticated } = useConvexAuth();
   const createHackathon = useMutation(api.hackathons.create);
 
-  const today = new Date().toISOString().split("T")[0];
+  const formatDateInput = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+      date.getDate()
+    ).padStart(2, "0")}`;
+
+  const parseDateInputToTimestamp = (dateInput: string) => {
+    const [year, month, day] = dateInput.split("-").map(Number);
+    return new Date(year, month - 1, day).getTime();
+  };
+
+  const today = formatDateInput(new Date());
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -71,8 +81,8 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
       const hackathonId = await createHackathon({
         name,
         description,
-        startDate: new Date(startDate).getTime(),
-        endDate: new Date(endDate).getTime(),
+        startDate: parseDateInputToTimestamp(startDate),
+        endDate: parseDateInputToTimestamp(endDate),
         submissionFrequencyMinutes: submissionFrequency,
         openGraphImageUrl: trimmedBanner || undefined,
         isPublic,

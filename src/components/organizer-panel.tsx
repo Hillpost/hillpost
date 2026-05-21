@@ -28,6 +28,11 @@ import {
 import { QrCodeButton } from "@/components/qr-code-overlay";
 import { PanelSkeleton, SectionSkeleton } from "@/components/skeleton";
 
+const parseDateInputToTimestamp = (dateInput: string) => {
+  const [year, month, day] = dateInput.split("-").map(Number);
+  return new Date(year, month - 1, day).getTime();
+};
+
 interface OrganizerPanelProps {
   hackathonId: Id<"hackathons">;
   hackathon: {
@@ -279,8 +284,8 @@ function HackathonInfoSection({
 
   const saveDates = async () => {
     if (!newStartDate || !newEndDate) return;
-    const start = new Date(newStartDate).getTime();
-    const end = new Date(newEndDate).getTime();
+    const start = parseDateInputToTimestamp(newStartDate);
+    const end = parseDateInputToTimestamp(newEndDate);
     if (end < start) { toast.error("End date must be on or after start date"); return; }
     try {
       await updateHackathon({ hackathonId, startDate: start, endDate: end });
