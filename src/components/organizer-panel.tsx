@@ -27,11 +27,7 @@ import {
 } from "lucide-react";
 import { QrCodeButton } from "@/components/qr-code-overlay";
 import { PanelSkeleton, SectionSkeleton } from "@/components/skeleton";
-
-const parseDateInputToTimestamp = (dateInput: string) => {
-  const [year, month, day] = dateInput.split("-").map(Number);
-  return new Date(year, month - 1, day).getTime();
-};
+import { parseDateInputToTimestamp } from "@/lib/date-input";
 
 interface OrganizerPanelProps {
   hackathonId: Id<"hackathons">;

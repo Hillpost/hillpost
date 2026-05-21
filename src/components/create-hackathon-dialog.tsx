@@ -11,6 +11,7 @@ import { X, Lock, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isSafeHttpUrl } from "@/lib/url";
 import { useDisplayNamePrompt } from "@/components/display-name-prompt";
+import { formatDateForInput, parseDateInputToTimestamp } from "@/lib/date-input";
 
 interface CreateHackathonDialogProps {
   isOpen: boolean;
@@ -23,17 +24,7 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
   const { isAuthenticated } = useConvexAuth();
   const createHackathon = useMutation(api.hackathons.create);
 
-  const formatDateInput = (date: Date) =>
-    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-      date.getDate()
-    ).padStart(2, "0")}`;
-
-  const parseDateInputToTimestamp = (dateInput: string) => {
-    const [year, month, day] = dateInput.split("-").map(Number);
-    return new Date(year, month - 1, day).getTime();
-  };
-
-  const today = formatDateInput(new Date());
+  const today = formatDateForInput(new Date());
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
