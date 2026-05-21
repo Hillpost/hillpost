@@ -274,7 +274,7 @@ export default function HackathonDetailPage() {
     role === "organizer" ||
     (role === "judge" && (scoresMode === "all" || (isApprovedJudge && scoresMode === "judges"))) ||
     (role === "competitor" && scoresVisibleToCompetitors);
-  const isLive = now >= hackathon.startDate && now < hackathon.endDate;
+  const isLive = now >= hackathon.startDate && now <= hackathon.endDate;
   const daysLeft = Math.max(0, Math.ceil((hackathon.endDate - now) / (1000 * 60 * 60 * 24)));
 
   const tabs: { id: Tab; label: string; show: boolean; badge?: number }[] = [

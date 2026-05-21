@@ -149,7 +149,7 @@ export default function DashboardPage() {
           >
             {validHackathons.map((h) => {
               const isUpcoming = now < h.startDate;
-              const isLive = now >= h.startDate && now < h.endDate;
+              const isLive = now >= h.startDate && now <= h.endDate;
               return (
                 <motion.button
                   key={h._id}

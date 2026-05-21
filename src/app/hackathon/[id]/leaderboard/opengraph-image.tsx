@@ -23,7 +23,7 @@ export default async function Image({
     const hackathon = await fetchQuery(api.hackathons.get, { hackathonId });
     if (hackathon) {
       hackathonName = hackathon.name;
-      isLive = Date.now() >= hackathon.startDate && Date.now() < hackathon.endDate;
+      isLive = Date.now() >= hackathon.startDate && Date.now() <= hackathon.endDate;
       bgImage = hackathon.openGraphImageUrl ?? "";
     }
   } catch (e) {

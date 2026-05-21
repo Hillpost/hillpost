@@ -89,7 +89,7 @@ export default function LeaderboardPage() {
   };
 
   const { entries: allEntries, maxPossibleScore, tracks } = leaderboardData;
-  const isLive = now >= hackathon.startDate && now < hackathon.endDate;
+  const isLive = now >= hackathon.startDate && now <= hackathon.endDate;
   const leaderboard = selectedTrackId
     ? allEntries.filter((e) => e.tracks.some((t) => (t._id as string) === selectedTrackId))
     : allEntries;

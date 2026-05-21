@@ -426,7 +426,7 @@ export const joinPublic = mutation({
     if (
       !hackathon ||
       hackathon.isPublic !== true ||
-      Date.now() >= hackathon.endDate
+      Date.now() > hackathon.endDate
     ) {
       throw new Error("Hackathon is not publicly joinable");
     }
