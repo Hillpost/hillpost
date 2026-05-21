@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { QrCodeButton } from "@/components/qr-code-overlay";
 import { PanelSkeleton, SectionSkeleton } from "@/components/skeleton";
+import { parseDateInputToTimestamp } from "@/lib/date-input";
 
 interface OrganizerPanelProps {
   hackathonId: Id<"hackathons">;
@@ -279,8 +280,8 @@ function HackathonInfoSection({
 
   const saveDates = async () => {
     if (!newStartDate || !newEndDate) return;
-    const start = new Date(newStartDate).getTime();
-    const end = new Date(newEndDate).getTime();
+    const start = parseDateInputToTimestamp(newStartDate);
+    const end = parseDateInputToTimestamp(newEndDate);
     if (end < start) { toast.error("End date must be on or after start date"); return; }
     try {
       await updateHackathon({ hackathonId, startDate: start, endDate: end });

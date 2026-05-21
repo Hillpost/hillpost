@@ -11,6 +11,7 @@ import { X, Lock, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isSafeHttpUrl } from "@/lib/url";
 import { useDisplayNamePrompt } from "@/components/display-name-prompt";
+import { formatDateForInput, parseDateInputToTimestamp } from "@/lib/date-input";
 
 interface CreateHackathonDialogProps {
   isOpen: boolean;
@@ -23,7 +24,7 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
   const { isAuthenticated } = useConvexAuth();
   const createHackathon = useMutation(api.hackathons.create);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = formatDateForInput(new Date());
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -71,8 +72,8 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
       const hackathonId = await createHackathon({
         name,
         description,
-        startDate: new Date(startDate).getTime(),
-        endDate: new Date(endDate).getTime(),
+        startDate: parseDateInputToTimestamp(startDate),
+        endDate: parseDateInputToTimestamp(endDate),
         submissionFrequencyMinutes: submissionFrequency,
         openGraphImageUrl: trimmedBanner || undefined,
         isPublic,
