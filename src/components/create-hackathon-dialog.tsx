@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { X, Lock, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isSafeHttpUrl } from "@/lib/url";
+import { useDisplayNamePrompt } from "@/components/display-name-prompt";
+import { formatDateForInput, parseDateInputToTimestamp } from "@/lib/date-input";
 
 interface CreateHackathonDialogProps {
   isOpen: boolean;
@@ -22,7 +24,7 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
   const { isAuthenticated } = useConvexAuth();
   const createHackathon = useMutation(api.hackathons.create);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = formatDateForInput(new Date());
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -33,6 +35,7 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
   const [isPublic, setIsPublic] = useState(false);
   const [bannerImageUrl, setBannerImageUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { requestDisplayName, displayNamePrompt } = useDisplayNamePrompt();
 
   const resetForm = () => {
     setName("");
@@ -63,24 +66,29 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
       return;
     }
     if (submissionsStartDate) {
-      const subStart = new Date(submissionsStartDate).getTime();
-      const end = new Date(endDate).getTime();
+      const subStart = parseDateInputToTimestamp(submissionsStartDate);
+      const end = parseDateInputToTimestamp(endDate);
       if (subStart > end) {
         toast.error("Submissions cannot open after the hackathon ends");
         return;
       }
+    }
+    const userName = await requestDisplayName(user);
+    if (!userName) {
+      return;
     }
     setIsSubmitting(true);
     try {
       const hackathonId = await createHackathon({
         name,
         description,
-        startDate: new Date(startDate).getTime(),
-        submissionsStartDate: submissionsStartDate ? new Date(submissionsStartDate).getTime() : undefined,
-        endDate: new Date(endDate).getTime(),
+        startDate: parseDateInputToTimestamp(startDate),
+        submissionsStartDate: submissionsStartDate ? parseDateInputToTimestamp(submissionsStartDate) : undefined,
+        endDate: parseDateInputToTimestamp(endDate),
         submissionFrequencyMinutes: submissionFrequency,
         openGraphImageUrl: trimmedBanner || undefined,
         isPublic,
+        userName,
         userImageUrl: user?.imageUrl,
       });
       toast.success("Hackathon created successfully!");
@@ -95,9 +103,10 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/80" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg border border-[#1F1F1F] bg-black p-6 shadow-2xl">
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/80" onClick={onClose} />
+        <div className="relative z-10 w-full max-w-lg border border-[#1F1F1F] bg-black p-6 shadow-2xl">
         <div className="mb-6 flex items-center justify-between border-b border-[#1F1F1F] pb-4">
           <div>
             <div className="text-xs text-[#555555] uppercase tracking-widest mb-1">── NEW EVENT</div>
@@ -268,7 +277,9 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
             </button>
           </div>
         </form>
+        </div>
       </div>
-    </div>
+      {displayNamePrompt}
+    </>
   );
 }

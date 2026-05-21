@@ -20,19 +20,19 @@ export const get = query({
   handler: async (ctx, args) => {
     const hackathon = await ctx.db.get(args.hackathonId);
     if (!hackathon) {
-      return { entries: [], maxPossibleScore: 0, leaderboardHidden: false as const };
+      return { entries: [], maxPossibleScore: 0, tracks: [], leaderboardHidden: false as const };
     }
 
     // Fetch userId and membership once; reuse for both access-gate and scores-visibility checks
     let userId: string | null = null;
-    let membership: { role: string } | null = null;
+    let membership: { role: string; status?: string } | null = null;
 
     if (!hackathon.isPublic) {
       // Private hackathon: must be authenticated and a member
       userId = await getAuthUserId(ctx);
-      if (!userId) return { entries: [], maxPossibleScore: 0, leaderboardHidden: false as const };
+      if (!userId) return { entries: [], maxPossibleScore: 0, tracks: [], leaderboardHidden: false as const };
       membership = await getCallerMembership(ctx, args.hackathonId, userId);
-      if (!membership) return { entries: [], maxPossibleScore: 0, leaderboardHidden: false as const };
+      if (!membership) return { entries: [], maxPossibleScore: 0, tracks: [], leaderboardHidden: false as const };
     } else {
       // Public hackathon: still fetch userId/membership for scores-visibility check below
       userId = await getAuthUserId(ctx);
@@ -41,10 +41,27 @@ export const get = query({
       }
     }
 
-    const scoresVisible = hackathon.scoresVisible !== false;
-    if (!scoresVisible) {
-      if (membership?.role === "competitor") {
-        return { entries: [], maxPossibleScore: 0, leaderboardHidden: true as const };
+    // Normalise scoresVisible: old booleans → new string literals
+    const rawVisible = hackathon.scoresVisible;
+    const visibilityMode: "all" | "judges" | "none" =
+      rawVisible === false || rawVisible === "none"
+        ? "none"
+        : rawVisible === "judges"
+          ? "judges"
+          : "all"; // undefined, true, or "all"
+
+    if (visibilityMode === "none") {
+      // Only organizers can see
+      if (membership?.role !== "organizer") {
+        return { entries: [], maxPossibleScore: 0, tracks: [], leaderboardHidden: true as const };
+      }
+    } else if (visibilityMode === "judges") {
+      // Only organizers and approved judges can see judge-only leaderboards.
+      const canViewJudgeOnly =
+        membership?.role === "organizer" ||
+        (membership?.role === "judge" && membership.status === "approved");
+      if (!canViewJudgeOnly) {
+        return { entries: [], maxPossibleScore: 0, tracks: [], leaderboardHidden: true as const };
       }
     }
 
@@ -57,6 +74,23 @@ export const get = query({
       .query("categories")
       .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
       .collect();
+
+    const tracks = await ctx.db
+      .query("tracks")
+      .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
+      .collect();
+
+    const allTeamTracks = await ctx.db
+      .query("teamTracks")
+      .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
+      .collect();
+
+    const teamTrackMap = new Map<string, string[]>();
+    for (const tt of allTeamTracks) {
+      const key = tt.teamId as string;
+      if (!teamTrackMap.has(key)) teamTrackMap.set(key, []);
+      teamTrackMap.get(key)!.push(tt.trackId as string);
+    }
 
     const sortedCategories = categories.sort((a, b) => a.order - b.order);
 
@@ -71,10 +105,14 @@ export const get = query({
           .order("desc")
           .first();
 
+        const teamTrackIds = teamTrackMap.get(team._id as string) ?? [];
+        const teamTracks = tracks.filter((t) => teamTrackIds.includes(t._id as string));
+
         if (!latestSubmission) {
           return {
             teamId: team._id,
             teamName: team.name,
+            tracks: teamTracks,
             latestSubmission: null,
             averageScore: 0,
             overallScore: 0,
@@ -151,6 +189,7 @@ export const get = query({
         return {
           teamId: team._id,
           teamName: team.name,
+          tracks: teamTracks,
           latestSubmission: {
             ...latestSubmission,
             judgedBy: [],
@@ -177,6 +216,6 @@ export const get = query({
       0
     );
 
-    return { entries: leaderboard, maxPossibleScore, leaderboardHidden: false as const };
+    return { entries: leaderboard, maxPossibleScore, tracks, leaderboardHidden: false as const };
   },
 });

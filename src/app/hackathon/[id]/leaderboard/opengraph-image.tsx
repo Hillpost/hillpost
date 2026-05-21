@@ -16,14 +16,14 @@ export default async function Image({
   const hackathonId = resolvedParams.id as Id<"hackathons">;
 
   let hackathonName = "Hackathon";
-  let isActive = false;
+  let isLive = false;
   let bgImage = "";
 
   try {
     const hackathon = await fetchQuery(api.hackathons.get, { hackathonId });
     if (hackathon) {
       hackathonName = hackathon.name;
-      isActive = hackathon.isActive;
+      isLive = Date.now() >= hackathon.startDate && Date.now() <= hackathon.endDate;
       bgImage = hackathon.openGraphImageUrl ?? "";
     }
   } catch (e) {
@@ -87,7 +87,7 @@ export default async function Image({
             display: "flex",
           }}
         >
-          {isActive ? "[ LIVE LEADERBOARD ]" : "[ LEADERBOARD ]"}
+          {isLive ? "[ LIVE LEADERBOARD ]" : "[ LEADERBOARD ]"}
         </div>
 
         <div

@@ -7,6 +7,7 @@ import { SignInButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { isSafeHttpUrl } from "@/lib/url";
+import { useEffect, useState } from "react";
 import type { Id } from "../../convex/_generated/dataModel";
 
 // ─── Prop types ───────────────────────────────────────────────────────────────
@@ -21,7 +22,7 @@ type PublicHackathon = {
   isActive: boolean;
   isPublic?: boolean;
   openGraphImageUrl?: string;
-  scoresVisible?: boolean;
+  scoresVisible?: boolean | "all" | "judges" | "none";
 };
 
 type PublicCategory = {
@@ -62,10 +63,9 @@ type EventStatus = "live" | "upcoming" | "ended";
 function getEventStatus(
   startDate: number,
   endDate: number,
-  isActive: boolean,
   now: number
 ): EventStatus {
-  if (!isActive || now > endDate) return "ended";
+  if (now > endDate) return "ended";
   if (now < startDate) return "upcoming";
   return "live";
 }
@@ -136,8 +136,12 @@ export function PublicHackathonLanding({
   sponsors,
   publicJudges,
 }: PublicHackathonLandingProps) {
-  const now = Date.now();
-  const status = getEventStatus(hackathon.startDate, hackathon.endDate, hackathon.isActive, now);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+  const status = getEventStatus(hackathon.startDate, hackathon.endDate, now);
   const isOpen = status !== "ended";
   const countdown = getCountdownLabel(hackathon.startDate, hackathon.endDate, status, now);
   const totalPoints = categories?.reduce((sum, c) => sum + c.maxScore, 0) ?? 0;
@@ -336,7 +340,7 @@ export function PublicHackathonLanding({
                           </div>
                         )}
                         {cat.description && (
-                          <p className="text-xs text-[#666666] leading-relaxed">
+                          <p className="text-xs text-[#666666] leading-relaxed whitespace-pre-wrap break-words">
                             {cat.description}
                           </p>
                         )}
@@ -554,7 +558,7 @@ export function PublicHackathonLanding({
             </div>
 
             {/* Leaderboard link */}
-            {hackathon.scoresVisible !== false && status !== "upcoming" && (
+            {hackathon.scoresVisible !== false && hackathon.scoresVisible !== "none" && hackathon.scoresVisible !== "judges" && status !== "upcoming" && (
               <Link
                 href={`/hackathon/${hackathonId}/leaderboard`}
                 className="group mt-3 flex items-center justify-between border border-[#1F1F1F] bg-[#0A0A0A] px-5 py-4 transition-colors hover:border-[#FF6600]"

@@ -28,12 +28,24 @@ export async function requireAuthUserId(
 
 /**
  * Retrieves the authenticated user's display name from the Convex auth context.
- * Returns a fallback string if the name is not available.
  */
 export async function getAuthUserName(
   ctx: QueryCtx | MutationCtx
-): Promise<string> {
+): Promise<string | undefined> {
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity) return "Unknown";
-  return identity.name ?? "Unknown";
+  if (!identity) return undefined;
+
+  const fullName = identity.name?.trim();
+  if (fullName) return fullName;
+
+  const nameParts = [identity.givenName, identity.familyName]
+    .map((part) => part?.trim())
+    .filter(Boolean);
+  if (nameParts.length > 0) return nameParts.join(" ");
+
+  return (
+    identity.nickname?.trim() ||
+    identity.preferredUsername?.trim() ||
+    undefined
+  );
 }

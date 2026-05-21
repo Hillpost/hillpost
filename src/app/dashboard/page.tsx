@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -31,6 +31,12 @@ export default function DashboardPage() {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (!isLoaded) {
     return (
@@ -141,52 +147,61 @@ export default function DashboardPage() {
               visible: { opacity: 1, transition: { staggerChildren: 0.07 } },
             }}
           >
-            {validHackathons.map((h) => (
-              <motion.button
-                key={h._id}
-                variants={{
-                  hidden: { opacity: 0, y: 8 },
-                  visible: { opacity: 1, y: 0 },
-                }}
-                onClick={() => router.push(`/hackathon/${h._id}`)}
-                className="group border border-[#1F1F1F] bg-[#0A0A0A] p-5 text-left transition-colors hover:border-white"
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wide group-hover:text-[#00FF41] transition-colors">
-                    {h.name}
-                  </h3>
-                  <span
-                    className={cn(
-                      "tui-badge",
-                      roleBadgeClass(h.myRole)
+            {validHackathons.map((h) => {
+              const isUpcoming = now < h.startDate;
+              const isLive = now >= h.startDate && now <= h.endDate;
+              return (
+                <motion.button
+                  key={h._id}
+                  variants={{
+                    hidden: { opacity: 0, y: 8 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
+                  onClick={() => router.push(`/hackathon/${h._id}`)}
+                  className="group border border-[#1F1F1F] bg-[#0A0A0A] p-5 text-left transition-colors hover:border-white"
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wide group-hover:text-[#00FF41] transition-colors">
+                      {h.name}
+                    </h3>
+                    <span
+                      className={cn(
+                        "tui-badge",
+                        roleBadgeClass(h.myRole)
+                      )}
+                    >
+                      {h.myRole.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs text-[#555555]">
+                    <span>
+                      {format(new Date(h.startDate), "MMM d")} —{" "}
+                      {format(new Date(h.endDate), "MMM d, yyyy")}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    {isLive ? (
+                      <span className="flex items-center gap-1 text-xs text-[#00FF41] uppercase tracking-widest">
+                        <span className="status-pulse h-1.5 w-1.5 bg-[#00FF41] inline-block" />
+                        [LIVE]
+                      </span>
+                    ) : isUpcoming ? (
+                      <span className="flex items-center gap-1 text-xs text-[#00B4FF] uppercase tracking-widest">
+                        <span className="h-1.5 w-1.5 bg-[#00B4FF] inline-block" />
+                        [UPCOMING]
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs text-[#555555] uppercase tracking-widest">
+                        <span className="h-1.5 w-1.5 bg-[#555555] inline-block" />
+                        [CLOSED]
+                      </span>
                     )}
-                  >
-                    {h.myRole.toUpperCase()}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs text-[#555555]">
-                  <span>
-                    {format(new Date(h.startDate), "MMM d")} —{" "}
-                    {format(new Date(h.endDate), "MMM d, yyyy")}
-                  </span>
-                </div>
-
-                <div className="mt-3 flex items-center gap-2">
-                  {h.isActive ? (
-                    <span className="flex items-center gap-1 text-xs text-[#00FF41] uppercase tracking-widest">
-                      <span className="status-pulse h-1.5 w-1.5 bg-[#00FF41] inline-block" />
-                      [LiVE]
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-xs text-[#555555] uppercase tracking-widest">
-                      <span className="h-1.5 w-1.5 bg-[#555555] inline-block" />
-                      [○ CLOSED]
-                    </span>
-                  )}
-                </div>
-              </motion.button>
-            ))}
+                  </div>
+                </motion.button>
+              );
+            })}
           </motion.div>
         )}
       </div>

@@ -10,6 +10,22 @@ type PublicJudgeSummary = {
   userImageUrl?: string;
 };
 
+function normalizeMemberDisplayName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    throw new Error("Display name cannot be empty");
+  }
+  if (/[\u0000-\u001F\u007F]/.test(trimmed)) {
+    throw new Error("Display name cannot contain control characters");
+  }
+
+  const normalized = trimmed.replace(/ {2,}/g, " ");
+  if (normalized.length > 80) {
+    throw new Error("Display name must be 80 characters or fewer");
+  }
+  return normalized;
+}
+
 export const getMyMembership = query({
   args: {
     hackathonId: v.id("hackathons"),
@@ -161,6 +177,35 @@ export const updateStatus = mutation({
     }
 
     await ctx.db.patch(args.memberId, { status: args.status });
+    return args.memberId;
+  },
+});
+
+export const updateDisplayName = mutation({
+  args: {
+    memberId: v.id("hackathonMembers"),
+    userName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireAuthUserId(ctx);
+
+    const member = await ctx.db.get(args.memberId);
+    if (!member) {
+      throw new Error("Member not found");
+    }
+
+    const callerMembership = await ctx.db
+      .query("hackathonMembers")
+      .withIndex("by_hackathonId_userId", (q) =>
+        q.eq("hackathonId", member.hackathonId).eq("userId", userId)
+      )
+      .first();
+    if (!callerMembership || callerMembership.role !== "organizer") {
+      throw new Error("Only organizers can update member names");
+    }
+
+    const userName = normalizeMemberDisplayName(args.userName);
+    await ctx.db.patch(args.memberId, { userName });
     return args.memberId;
   },
 });

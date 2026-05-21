@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function LeaderboardPage() {
   const params = useParams();
@@ -15,6 +16,13 @@ export default function LeaderboardPage() {
   const hackathon = useQuery(api.hackathons.get, { hackathonId });
   const leaderboardData = useQuery(api.leaderboard.get, { hackathonId });
   const membership = useQuery(api.members.getMyMembership, { hackathonId });
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (hackathon === undefined || leaderboardData === undefined || membership === undefined) {
     return (
@@ -53,7 +61,7 @@ export default function LeaderboardPage() {
         <div className="border border-[#1F1F1F] bg-[#0A0A0A] p-8 text-center">
           <p className="text-sm text-[#555555] uppercase tracking-wider">LEADERBOARD HIDDEN</p>
           <p className="mt-2 text-xs text-[#333333] uppercase tracking-wide">
-            The organizer has disabled leaderboard visibility for competitors.
+            The organizer has hidden the leaderboard from you.
           </p>
         </div>
       </div>
@@ -80,7 +88,11 @@ export default function LeaderboardPage() {
     }
   };
 
-  const { entries: leaderboard, maxPossibleScore } = leaderboardData;
+  const { entries: allEntries, maxPossibleScore, tracks } = leaderboardData;
+  const isLive = now >= hackathon.startDate && now <= hackathon.endDate;
+  const leaderboard = selectedTrackId
+    ? allEntries.filter((e) => e.tracks.some((t) => (t._id as string) === selectedTrackId))
+    : allEntries;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -115,14 +127,44 @@ export default function LeaderboardPage() {
               </>
             )}
           </div>
-          {hackathon.isActive && (
+          {isLive && (
             <span className="flex items-center gap-2 text-xs text-[#00FF41] uppercase tracking-widest border border-[#00FF41]/30 px-3 py-1.5">
               <span className="status-pulse h-1.5 w-1.5 bg-[#00FF41] inline-block" />
-              [LiVE]
+              [LIVE]
             </span>
           )}
         </div>
       </div>
+
+      {tracks.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedTrackId(null)}
+            className={cn(
+              "px-3 py-1 text-xs font-bold uppercase tracking-wider border transition-colors",
+              selectedTrackId === null
+                ? "border-white text-white bg-white/10"
+                : "border-[#1F1F1F] text-[#555555] hover:border-white hover:text-white"
+            )}
+          >
+            ALL TRACKS
+          </button>
+          {tracks.map((track) => (
+            <button
+              key={track._id as string}
+              onClick={() => setSelectedTrackId((track._id as string) === selectedTrackId ? null : (track._id as string))}
+              className={cn(
+                "px-3 py-1 text-xs font-bold uppercase tracking-wider border transition-colors",
+                selectedTrackId === (track._id as string)
+                  ? "border-[#00B4FF] text-[#00B4FF] bg-[#00B4FF]/10"
+                  : "border-[#1F1F1F] text-[#555555] hover:border-[#00B4FF] hover:text-[#00B4FF]"
+              )}
+            >
+              {track.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {leaderboard.length === 0 ? (
         <div className="flex flex-col items-center justify-center border border-[#1F1F1F] bg-[#0A0A0A] py-16">
@@ -148,67 +190,80 @@ export default function LeaderboardPage() {
               </tr>
             </thead>
             <tbody>
-              {leaderboard.map((entry) => (
-                <tr
-                  key={entry.teamId}
-                  className={cn(getRankRowClass(entry.rank))}
-                >
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "text-sm font-bold",
-                        entry.rank === 1
-                          ? "text-[#FF6600]"
-                          : entry.rank <= 3
-                            ? "text-white"
-                            : "text-[#555555]"
-                      )}
-                    >
-                      {getRankLabel(entry.rank)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "text-sm font-bold uppercase tracking-wide",
-                        entry.rank === 1
-                          ? "text-[#FF6600]"
-                          : entry.rank <= 3
-                            ? "text-white"
-                            : "text-[#555555]"
-                      )}
-                    >
-                      {entry.teamName}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={cn(
-                        "text-sm font-bold tabular-nums",
-                        entry.overallScore > 0
-                          ? entry.rank === 1 ? "text-[#FF6600]" : "text-[#00FF41]"
-                          : "text-[#333333]"
-                      )}
-                    >
-                      {entry.overallScore > 0
-                        ? `${entry.overallScore.toFixed(1)}/${maxPossibleScore}`
-                        : "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {entry.latestSubmission ? (
-                      <Link
-                        href={`/hackathon/${hackathonId}/submission/${entry.latestSubmission._id}`}
-                        className="inline-flex items-center gap-1 border border-[#1F1F1F] px-3 py-1 text-xs text-[#555555] uppercase tracking-wider transition-colors hover:border-white hover:text-white"
+              {leaderboard.map((entry, index) => {
+                const displayRank = index + 1;
+                return (
+                  <tr
+                    key={entry.teamId}
+                    className={cn(getRankRowClass(displayRank))}
+                  >
+                    <td className="px-4 py-3">
+                      <span
+                        className={cn(
+                          "text-sm font-bold",
+                          displayRank === 1
+                            ? "text-[#FF6600]"
+                            : displayRank <= 3
+                              ? "text-white"
+                              : "text-[#555555]"
+                        )}
                       >
-                        VIEW →
-                      </Link>
-                    ) : (
-                      <span className="text-xs text-[#333333]">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                        {getRankLabel(displayRank)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={cn(
+                            "text-sm font-bold uppercase tracking-wide",
+                            displayRank === 1
+                              ? "text-[#FF6600]"
+                              : displayRank <= 3
+                                ? "text-white"
+                                : "text-[#555555]"
+                          )}
+                        >
+                          {entry.teamName}
+                        </span>
+                        {entry.tracks.map((track) => (
+                          <span
+                            key={track._id as string}
+                            className="tui-badge border-[#00B4FF] text-[#00B4FF]"
+                          >
+                            {track.name}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span
+                        className={cn(
+                          "text-sm font-bold tabular-nums",
+                          entry.overallScore > 0
+                            ? displayRank === 1 ? "text-[#FF6600]" : "text-[#00FF41]"
+                            : "text-[#333333]"
+                        )}
+                      >
+                        {entry.overallScore > 0
+                          ? `${entry.overallScore.toFixed(1)}/${maxPossibleScore}`
+                          : "—"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {entry.latestSubmission ? (
+                        <Link
+                          href={`/hackathon/${hackathonId}/submission/${entry.latestSubmission._id}`}
+                          className="inline-flex items-center gap-1 border border-[#1F1F1F] px-3 py-1 text-xs text-[#555555] uppercase tracking-wider transition-colors hover:border-white hover:text-white"
+                        >
+                          VIEW →
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-[#333333]">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -34,6 +34,7 @@
   --t-hover-border: rgba(255, 255, 255, 0.15);
   --t-btn-border:   rgba(255, 255, 255, 0.2);
   --t-dot:         #1a1a1a;
+  --t-accent:      #00FF41;
   /* Tailwind built-in color overrides */
   --color-black:   #000000;
   --color-white:   #ffffff;
@@ -52,6 +53,7 @@
   --t-hover-border: rgba(0, 0, 0, 0.15);
   --t-btn-border:   rgba(0, 0, 0, 0.2);
   --t-dot:         #D8D8D8;
+  --t-accent:      #008C24;
   /* Swap Tailwind's black/white so bg-black → white, text-white → black */
   --color-black:   #ffffff;
   --color-white:   #000000;
@@ -104,8 +106,8 @@ body {
 }
 
 @keyframes border-pulse-green {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 255, 65, 0); }
-  50% { box-shadow: 0 0 0 3px rgba(0, 255, 65, 0.12); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 140, 36, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(0, 140, 36, 0.12); }
 }
 
 /* Cursor blink utility */
@@ -163,12 +165,12 @@ body {
 }
 
 .tui-btn-green {
-  border-color: #00FF41;
-  color: #00FF41;
+  border-color: var(--t-accent);
+  color: var(--t-accent);
 }
 
 .tui-btn-green:hover {
-  background: #00FF41;
+  background: var(--t-accent);
   color: #000000;
 }
 
@@ -257,4 +259,80 @@ body {
 
 [data-theme="light"] .hover\:border-white:hover {
   border-color: var(--t-fg) !important;
+}
+
+/* ─── Green accent overrides for light mode ──────────────────────── */
+/* Swaps neon #00FF41 → darker #008C24 for readability on white      */
+[data-theme="light"] .text-\[\#00FF41\] {
+  color: var(--t-accent) !important;
+}
+
+[data-theme="light"] .bg-\[\#00FF41\] {
+  background-color: var(--t-accent) !important;
+}
+
+[data-theme="light"] .border-\[\#00FF41\] {
+  border-color: var(--t-accent) !important;
+}
+
+[data-theme="light"] .hover\:text-\[\#00FF41\]:hover {
+  color: var(--t-accent) !important;
+}
+
+[data-theme="light"] .hover\:bg-\[\#00FF41\]:hover {
+  background-color: var(--t-accent) !important;
+}
+
+[data-theme="light"] .hover\:border-\[\#00FF41\]:hover {
+  border-color: var(--t-accent) !important;
+}
+
+[data-theme="light"] .accent-\[\#00FF41\] {
+  accent-color: var(--t-accent) !important;
+}
+
+/* Green with opacity modifiers */
+[data-theme="light"] .border-\[\#00FF41\]\/30 {
+  border-color: rgba(0, 140, 36, 0.3) !important;
+}
+
+[data-theme="light"] .bg-\[\#00FF41\]\/5 {
+  background-color: rgba(0, 140, 36, 0.05) !important;
+}
+
+[data-theme="light"] .bg-\[\#00FF41\]\/10 {
+  background-color: rgba(0, 140, 36, 0.1) !important;
+}
+
+[data-theme="light"] .bg-\[\#00FF4108\] {
+  background-color: rgba(0, 140, 36, 0.03) !important;
+}
+
+[data-theme="light"] .bg-\[\#00FF4110\] {
+  background-color: rgba(0, 140, 36, 0.06) !important;
+}
+
+/* Tailwind semantic color overrides */
+[data-theme="light"] .text-accent {
+  color: var(--t-accent) !important;
+}
+
+[data-theme="light"] .bg-accent {
+  background-color: var(--t-accent) !important;
+}
+
+[data-theme="light"] .border-accent {
+  border-color: var(--t-accent) !important;
+}
+
+[data-theme="light"] .text-green {
+  color: var(--t-accent) !important;
+}
+
+[data-theme="light"] .bg-green {
+  background-color: var(--t-accent) !important;
+}
+
+[data-theme="light"] .border-green {
+  border-color: var(--t-accent) !important;
 }

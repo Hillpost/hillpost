@@ -1,6 +1,35 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { requireAuthUserId, getAuthUserId, getAuthUserName } from "./auth";
+
+function sanitizeDisplayName(name: string | undefined): string | undefined {
+  const trimmed = name?.trim();
+  if (!trimmed) return undefined;
+  if (/[\u0000-\u001F\u007F]/.test(trimmed)) {
+    throw new Error("Display name cannot contain control characters");
+  }
+
+  const normalized = trimmed.replace(/ {2,}/g, " ");
+  if (normalized.length > 80) {
+    throw new Error("Display name must be 80 characters or fewer");
+  }
+  return normalized;
+}
+
+async function requireDisplayName(
+  ctx: Parameters<typeof getAuthUserName>[0],
+  providedName: string | undefined
+): Promise<string> {
+  const userName =
+    sanitizeDisplayName(providedName) ??
+    sanitizeDisplayName(await getAuthUserName(ctx));
+  if (!userName) {
+    throw new Error("Please enter your name to continue");
+  }
+  return userName;
+}
 
 function generateJoinCode(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -32,6 +61,26 @@ function stripJoinCodes<T extends { competitorJoinCode: string; judgeJoinCode: s
   return sanitized as Omit<T, "competitorJoinCode" | "judgeJoinCode">;
 }
 
+async function requireOrganizerMembership(
+  ctx: MutationCtx,
+  hackathonId: Id<"hackathons">,
+  userId: string
+) {
+  const membership = await ctx.db
+    .query("hackathonMembers")
+    .withIndex("by_hackathonId_userId", (q) =>
+      q.eq("hackathonId", hackathonId).eq("userId", userId)
+    )
+    .first();
+  if (
+    !membership ||
+    membership.role !== "organizer" ||
+    membership.status !== "approved"
+  ) {
+    throw new Error("Only organizers can manage hackathons");
+  }
+}
+
 export const create = mutation({
   args: {
     name: v.string(),
@@ -42,11 +91,12 @@ export const create = mutation({
     submissionFrequencyMinutes: v.optional(v.number()),
     openGraphImageUrl: v.optional(v.string()),
     isPublic: v.optional(v.boolean()),
+    userName: v.optional(v.string()),
     userImageUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
-    const userName = await getAuthUserName(ctx);
+    const userName = await requireDisplayName(ctx, args.userName);
 
     let competitorJoinCode = generateJoinCode();
     let judgeJoinCode = generateJoinCode();
@@ -201,7 +251,7 @@ export const list = query({
         .withIndex("by_isPublic", (q) => q.eq("isPublic", true))
         .collect();
       return publicHackathons
-        .filter((h) => h.isActive !== false && h.endDate >= now)
+        .filter((h) => h.endDate >= now)
         .map((hackathon) => stripJoinCodes(hackathon));
     }
     const hackathons = await ctx.db.query("hackathons").collect();
@@ -278,7 +328,7 @@ export const update = mutation({
     openGraphImageUrl: v.optional(v.union(v.string(), v.null())),
     isPublic: v.optional(v.boolean()),
     feedbackVisible: v.optional(v.boolean()),
-    scoresVisible: v.optional(v.boolean()),
+    scoresVisible: v.optional(v.union(v.literal("all"), v.literal("judges"), v.literal("none"))),
   },
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
@@ -288,16 +338,7 @@ export const update = mutation({
       throw new Error("Hackathon not found");
     }
 
-    // Verify organizer role
-    const membership = await ctx.db
-      .query("hackathonMembers")
-      .withIndex("by_hackathonId_userId", (q) =>
-        q.eq("hackathonId", args.hackathonId).eq("userId", userId)
-      )
-      .first();
-    if (!membership || membership.role !== "organizer") {
-      throw new Error("Only organizers can update hackathons");
-    }
+    await requireOrganizerMembership(ctx, args.hackathonId, userId);
 
     const sanitizedOpenGraphImageUrl =
       args.openGraphImageUrl === undefined
@@ -332,14 +373,76 @@ export const update = mutation({
   },
 });
 
+export const remove = mutation({
+  args: {
+    hackathonId: v.id("hackathons"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireAuthUserId(ctx);
+
+    const hackathon = await ctx.db.get(args.hackathonId);
+    if (!hackathon) {
+      throw new Error("Hackathon not found");
+    }
+
+    await requireOrganizerMembership(ctx, args.hackathonId, userId);
+
+    const submissions = await ctx.db
+      .query("submissions")
+      .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
+      .collect();
+
+    const scoresBySubmission = await Promise.all(
+      submissions.map((submission) =>
+        ctx.db
+          .query("scores")
+          .withIndex("by_submissionId", (q) => q.eq("submissionId", submission._id))
+          .collect()
+      )
+    );
+    const scoreIds = scoresBySubmission.flat().map((score) => score._id);
+    await Promise.all(scoreIds.map((scoreId) => ctx.db.delete(scoreId)));
+    await Promise.all(submissions.map((submission) => ctx.db.delete(submission._id)));
+
+    const [teams, categories, sponsors, members] = await Promise.all([
+      ctx.db
+        .query("teams")
+        .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
+        .collect(),
+      ctx.db
+        .query("categories")
+        .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
+        .collect(),
+      ctx.db
+        .query("sponsors")
+        .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
+        .collect(),
+      ctx.db
+        .query("hackathonMembers")
+        .withIndex("by_hackathonId", (q) => q.eq("hackathonId", args.hackathonId))
+        .collect(),
+    ]);
+
+    await Promise.all([
+      ...teams.map((team) => ctx.db.delete(team._id)),
+      ...categories.map((category) => ctx.db.delete(category._id)),
+      ...sponsors.map((sponsor) => ctx.db.delete(sponsor._id)),
+      ...members.map((member) => ctx.db.delete(member._id)),
+    ]);
+
+    await ctx.db.delete(args.hackathonId);
+  },
+});
+
 export const join = mutation({
   args: {
     joinCode: v.string(),
+    userName: v.optional(v.string()),
     userImageUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
-    const userName = await getAuthUserName(ctx);
+    const userName = await requireDisplayName(ctx, args.userName);
 
     let hackathon = await ctx.db
       .query("hackathons")
@@ -390,18 +493,18 @@ export const join = mutation({
 export const joinPublic = mutation({
   args: {
     hackathonId: v.id("hackathons"),
+    userName: v.optional(v.string()),
     userImageUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
-    const userName = await getAuthUserName(ctx);
+    const userName = await requireDisplayName(ctx, args.userName);
 
     const hackathon = await ctx.db.get(args.hackathonId);
     if (
       !hackathon ||
       hackathon.isPublic !== true ||
-      hackathon.isActive !== true ||
-      Date.now() >= hackathon.endDate
+      Date.now() > hackathon.endDate
     ) {
       throw new Error("Hackathon is not publicly joinable");
     }
@@ -461,7 +564,7 @@ export const listPublic = query({
       .withIndex("by_isPublic", (q) => q.eq("isPublic", true))
       .collect();
     return hackathons
-      .filter((h) => h.isActive !== false && h.endDate >= now)
+      .filter((h) => h.endDate >= now)
       .map((hackathon) => stripJoinCodes(hackathon));
   },
 });

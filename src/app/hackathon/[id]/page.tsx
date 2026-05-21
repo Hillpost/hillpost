@@ -6,6 +6,7 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import { useParams, useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
+import { useDisplayNamePrompt } from "@/components/display-name-prompt";
 import { format } from "date-fns";
 import React, { useState } from "react";
 import Link from "next/link";
@@ -59,6 +60,7 @@ export default function HackathonDetailPage() {
   const submissions = useQuery(api.submissions.list, { hackathonId });
   const allMembers = useQuery(api.members.listMembers, role === "organizer" ? { hackathonId } : "skip");
   const categories = useQuery(api.categories.list, { hackathonId });
+  const tracks = useQuery(api.tracks.list, { hackathonId });
   const sponsors = useQuery(api.sponsors.list, { hackathonId });
   const featuredSponsors = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "featured") ?? [];
   const largeSponsors = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "large") ?? [];
@@ -74,6 +76,7 @@ export default function HackathonDetailPage() {
   const [isJoiningPublic, setIsJoiningPublic] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const userId = user?.id;
+  const { requestDisplayName, displayNamePrompt } = useDisplayNamePrompt();
 
   React.useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
@@ -183,9 +186,18 @@ export default function HackathonDetailPage() {
       return;
     }
 
+    const userName = await requestDisplayName(user, { confirm: true });
+    if (!userName) {
+      return;
+    }
+
     setIsJoiningPublic(true);
     try {
-      const result = await joinPublic({ hackathonId, userImageUrl: user?.imageUrl });
+      const result = await joinPublic({
+        hackathonId,
+        userName,
+        userImageUrl: user?.imageUrl,
+      });
       if (result.alreadyMember) {
         toast.info("You're already a member — redirecting...");
       } else {
@@ -249,7 +261,20 @@ export default function HackathonDetailPage() {
 
   const isCreator = user?.id === hackathon.organizerId;
   const isPublicHackathon = hackathon.isPublic === true;
-  const scoresVisibleToCompetitors = hackathon.scoresVisible !== false;
+  const rawScoresVisible = hackathon.scoresVisible;
+  const scoresMode: "all" | "judges" | "none" =
+    rawScoresVisible === false || rawScoresVisible === "none"
+      ? "none"
+      : rawScoresVisible === "judges"
+        ? "judges"
+        : "all";
+  const scoresVisibleToCompetitors = scoresMode === "all";
+  const isApprovedJudge = role === "judge" && membership?.status === "approved";
+  const canViewLeaderboard =
+    role === "organizer" ||
+    (role === "judge" && (scoresMode === "all" || (isApprovedJudge && scoresMode === "judges"))) ||
+    (role === "competitor" && scoresVisibleToCompetitors);
+  const isLive = now >= hackathon.startDate && now <= hackathon.endDate;
   const daysLeft = Math.max(0, Math.ceil((hackathon.endDate - now) / (1000 * 60 * 60 * 24)));
 
   const tabs: { id: Tab; label: string; show: boolean; badge?: number }[] = [
@@ -306,7 +331,7 @@ export default function HackathonDetailPage() {
             <h1 className="text-2xl font-bold text-white uppercase tracking-wide">{hackathon.name}</h1>
           </div>
           <div className="flex flex-row items-center gap-2 sm:flex-col sm:items-end">
-            {hackathon.isActive ? (
+            {isLive ? (
               <span className="flex items-center gap-2 text-xs text-[#00FF41] uppercase tracking-widest border border-[#00FF41]/30 px-2.5 py-1">
                 <span className="status-pulse h-1.5 w-1.5 bg-[#00FF41] inline-block" />
                 [ ACTIVE ]
@@ -455,7 +480,7 @@ export default function HackathonDetailPage() {
           )}
 
           <div className="grid gap-4 md:grid-cols-2">
-            {(role === "organizer" || role === "judge" || (role === "competitor" && scoresVisibleToCompetitors)) && (
+            {canViewLeaderboard && (
               <Link
                 href={`/hackathon/${hackathonId}/leaderboard`}
                 className="group flex flex-col justify-center gap-4 border border-[#1F1F1F] bg-[#0A0A0A] p-6 transition-colors hover:border-[#FF6600]"
@@ -759,6 +784,30 @@ export default function HackathonDetailPage() {
           )}
 
 
+          {tracks && tracks.length > 0 && (
+            <div className="border border-[#1F1F1F] bg-[#0A0A0A] p-6">
+              <div className="mb-4 flex items-center gap-3">
+                <span className="text-xs text-[#555555] uppercase tracking-widest">── TRACKS</span>
+                <div className="h-px flex-1 bg-[#1F1F1F]" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {tracks.map((track) => (
+                  <div key={track._id} className="border border-[#1F1F1F] bg-[#111111] p-4 transition-colors hover:border-[#2a2a2a]">
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="text-sm font-bold text-white uppercase tracking-wide">{track.name}</p>
+                      <span className="tui-badge border-[#00B4FF] text-[#00B4FF]">
+                        {track.teamIds.length} {track.teamIds.length === 1 ? "TEAM" : "TEAMS"}
+                      </span>
+                    </div>
+                    {track.description && (
+                      <p className="text-xs text-[#555555] leading-relaxed whitespace-pre-wrap break-words">{track.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {categories && categories.length > 0 && (
             <div className="border border-[#1F1F1F] bg-[#0A0A0A] p-6">
               <div className="mb-4 flex items-center gap-3">
@@ -774,7 +823,7 @@ export default function HackathonDetailPage() {
                         {cat.maxScore} PTS
                       </span>
                     </div>
-                    <p className="text-xs text-[#555555] leading-relaxed">{cat.description}</p>
+                    <p className="text-xs text-[#555555] leading-relaxed whitespace-pre-wrap break-words">{cat.description}</p>
                   </div>
                 ))}
               </div>
@@ -822,6 +871,7 @@ export default function HackathonDetailPage() {
       {activeTab === "judge" && (
         <JudgePanel hackathonId={hackathonId} hackathon={hackathon} />
       )}
+      {displayNamePrompt}
     </div>
   );
 }
