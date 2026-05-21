@@ -249,7 +249,7 @@ export const list = query({
         .withIndex("by_isPublic", (q) => q.eq("isPublic", true))
         .collect();
       return publicHackathons
-        .filter((h) => h.isActive !== false && h.endDate >= now)
+        .filter((h) => h.endDate >= now)
         .map((hackathon) => stripJoinCodes(hackathon));
     }
     const hackathons = await ctx.db.query("hackathons").collect();
@@ -500,8 +500,7 @@ export const joinPublic = mutation({
     if (
       !hackathon ||
       hackathon.isPublic !== true ||
-      hackathon.isActive !== true ||
-      Date.now() >= hackathon.endDate
+      Date.now() > hackathon.endDate
     ) {
       throw new Error("Hackathon is not publicly joinable");
     }
@@ -561,7 +560,7 @@ export const listPublic = query({
       .withIndex("by_isPublic", (q) => q.eq("isPublic", true))
       .collect();
     return hackathons
-      .filter((h) => h.isActive !== false && h.endDate >= now)
+      .filter((h) => h.endDate >= now)
       .map((hackathon) => stripJoinCodes(hackathon));
   },
 });

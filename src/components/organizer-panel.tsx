@@ -181,15 +181,6 @@ function HackathonInfoSection({
     }
   };
 
-  const toggleActive = async () => {
-    try {
-      await updateHackathon({ hackathonId, isActive: !hackathon.isActive });
-      toast.success(hackathon.isActive ? "Hackathon deactivated" : "Hackathon activated");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update");
-    }
-  };
-
   const toggleFeedbackVisible = async () => {
     const current = hackathon.feedbackVisible !== false;
     try {
@@ -481,25 +472,17 @@ function HackathonInfoSection({
           </div>
         </div>
 
-        {/* Status toggle */}
+        {/* Status */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-[#1F1F1F] pt-4">
           <div>
             <label className="text-xs font-bold text-[#555555] uppercase tracking-widest">STATUS:</label>
             <p className="text-xs text-[#333333] mt-0.5">
-              {hackathon.isActive ? "Hackathon is currently active" : "Hackathon is inactive"}
+              Event runs from {format(new Date(hackathon.startDate), "MMM d, yyyy")} to {format(new Date(hackathon.endDate), "MMM d, yyyy")}.
+            </p>
+            <p className="text-xs text-[#333333] mt-0.5">
+              Status is automatically based on start and end dates.
             </p>
           </div>
-          <button
-            onClick={toggleActive}
-            className={cn(
-              "px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors",
-              hackathon.isActive
-                ? "border border-red-500/30 text-red-400 hover:border-red-500 hover:bg-red-500 hover:text-black"
-                : "border border-[#00FF41] text-[#00FF41] hover:bg-[#00FF41] hover:text-black"
-            )}
-          >
-            {hackathon.isActive ? "[ DEACTIVATE ]" : "[ ACTIVATE ]"}
-          </button>
         </div>
 
         {/* Cooldown */}
