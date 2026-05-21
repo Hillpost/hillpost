@@ -383,12 +383,16 @@ export const update = mutation({
       throw new Error("Invalid openGraphImageUrl");
     }
 
+    const hasSubmissionsStartDateArg = Object.prototype.hasOwnProperty.call(args, "submissionsStartDate");
+    const hasSubmissionsEndDateArg = Object.prototype.hasOwnProperty.call(args, "submissionsEndDate");
     const nextStartDate = args.startDate ?? hackathon.startDate;
     const nextEndDate = args.endDate ?? hackathon.endDate;
-    const nextSubmissionsStartDate =
-      args.submissionsStartDate ?? hackathon.submissionsStartDate ?? nextStartDate;
-    const nextSubmissionsEndDate =
-      args.submissionsEndDate ?? hackathon.submissionsEndDate ?? nextEndDate;
+    const nextSubmissionsStartDate = hasSubmissionsStartDateArg
+      ? (args.submissionsStartDate ?? nextStartDate)
+      : (hackathon.submissionsStartDate ?? nextStartDate);
+    const nextSubmissionsEndDate = hasSubmissionsEndDateArg
+      ? (args.submissionsEndDate ?? nextEndDate)
+      : (hackathon.submissionsEndDate ?? nextEndDate);
     validateSubmissionWindow({
       startDate: nextStartDate,
       submissionsStartDate: nextSubmissionsStartDate,
@@ -400,8 +404,8 @@ export const update = mutation({
       ...(args.name !== undefined && { name: args.name }),
       ...(args.description !== undefined && { description: args.description }),
       ...(args.startDate !== undefined && { startDate: args.startDate }),
-      ...(args.submissionsStartDate !== undefined && { submissionsStartDate: args.submissionsStartDate }),
-      ...(args.submissionsEndDate !== undefined && { submissionsEndDate: args.submissionsEndDate }),
+      ...(hasSubmissionsStartDateArg && { submissionsStartDate: args.submissionsStartDate ?? nextStartDate }),
+      ...(hasSubmissionsEndDateArg && { submissionsEndDate: args.submissionsEndDate ?? nextEndDate }),
       ...(args.endDate !== undefined && { endDate: args.endDate }),
       ...(args.submissionFrequencyMinutes !== undefined && {
         submissionFrequencyMinutes: args.submissionFrequencyMinutes,

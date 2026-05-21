@@ -328,6 +328,22 @@ function HackathonInfoSection({
     }
   };
 
+  const openDatesEditor = () => {
+    setNewStartDate(formatDateTimeForInput(new Date(hackathon.startDate)));
+    setNewSubmissionsStartDate(
+      hackathon.submissionsStartDate
+        ? formatDateTimeForInput(new Date(hackathon.submissionsStartDate))
+        : ""
+    );
+    setNewSubmissionsEndDate(
+      hackathon.submissionsEndDate
+        ? formatDateTimeForInput(new Date(hackathon.submissionsEndDate))
+        : ""
+    );
+    setNewEndDate(formatDateTimeForInput(new Date(hackathon.endDate)));
+    setIsEditingDates(true);
+  };
+
   const deleteHackathon = async () => {
     if (isDeletingHackathon) return;
     const confirmed = window.confirm(
@@ -484,7 +500,7 @@ function HackathonInfoSection({
                   </span>
                 )}
               </div>
-              <button onClick={() => { setNewStartDate(formatDateTimeForInput(new Date(hackathon.startDate))); setNewSubmissionsStartDate(hackathon.submissionsStartDate ? formatDateTimeForInput(new Date(hackathon.submissionsStartDate)) : ""); setNewSubmissionsEndDate(hackathon.submissionsEndDate ? formatDateTimeForInput(new Date(hackathon.submissionsEndDate)) : ""); setNewEndDate(formatDateTimeForInput(new Date(hackathon.endDate))); setIsEditingDates(true); }} className="p-1.5 text-[#555555] hover:text-white transition-colors">
+              <button onClick={openDatesEditor} className="p-1.5 text-[#555555] hover:text-white transition-colors">
                 <Pencil className="h-3.5 w-3.5" />
               </button>
             </div>
