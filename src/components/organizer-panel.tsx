@@ -461,26 +461,30 @@ function HackathonInfoSection({
         <div className="border-t border-[#1F1F1F] pt-4">
           <label className="text-xs font-bold text-[#555555] uppercase tracking-widest">DATES:</label>
           {isEditingDates ? (
-            <div className="mt-2 flex flex-wrap items-end gap-3">
-              <div className="space-y-1">
-                <label className="text-xs text-[#333333] uppercase">Start</label>
-                <input type="datetime-local" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)} className="tui-input w-auto" />
+            <div className="mt-2 space-y-3">
+              <div className="grid gap-3 lg:grid-cols-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-[#333333] uppercase">Start</label>
+                  <input type="datetime-local" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)} className="tui-input w-full" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-[#333333] uppercase">Submissions Open</label>
+                  <input type="datetime-local" value={newSubmissionsStartDate} onChange={(e) => setNewSubmissionsStartDate(e.target.value)} className="tui-input w-full" placeholder="Same as start" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-[#333333] uppercase">Submissions Close</label>
+                  <input type="datetime-local" value={newSubmissionsEndDate} onChange={(e) => setNewSubmissionsEndDate(e.target.value)} className="tui-input w-full" placeholder="Same as end" />
+                </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-[#333333] uppercase">Submissions Open</label>
-                <input type="datetime-local" value={newSubmissionsStartDate} onChange={(e) => setNewSubmissionsStartDate(e.target.value)} className="tui-input w-auto" placeholder="Same as start" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-[#333333] uppercase">Submissions Close</label>
-                <input type="datetime-local" value={newSubmissionsEndDate} onChange={(e) => setNewSubmissionsEndDate(e.target.value)} className="tui-input w-auto" placeholder="Same as end" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-[#333333] uppercase">End</label>
-                <input type="datetime-local" value={newEndDate} onChange={(e) => setNewEndDate(e.target.value)} className="tui-input w-auto" />
-              </div>
-              <div className="flex gap-2">
-                <button onClick={saveDates} className="px-3 py-1.5 text-xs font-bold text-black bg-[#00FF41] uppercase tracking-wider hover:bg-white transition-colors">SAVE</button>
-                <button onClick={() => setIsEditingDates(false)} className="px-3 py-1.5 text-xs text-[#555555] border border-[#1F1F1F] uppercase tracking-wider hover:border-white hover:text-white transition-colors">CANCEL</button>
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-[#333333] uppercase">End</label>
+                  <input type="datetime-local" value={newEndDate} onChange={(e) => setNewEndDate(e.target.value)} className="tui-input w-full min-w-[280px]" />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={saveDates} className="px-3 py-1.5 text-xs font-bold text-black bg-[#00FF41] uppercase tracking-wider hover:bg-white transition-colors">SAVE</button>
+                  <button onClick={() => setIsEditingDates(false)} className="px-3 py-1.5 text-xs text-[#555555] border border-[#1F1F1F] uppercase tracking-wider hover:border-white hover:text-white transition-colors">CANCEL</button>
+                </div>
               </div>
             </div>
           ) : (
