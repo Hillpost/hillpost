@@ -123,9 +123,9 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/80" onClick={onClose} />
-        <div className="relative z-10 w-full max-w-lg border border-[#1F1F1F] bg-black p-6 shadow-2xl">
+        <div className="relative z-10 max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border border-[#1F1F1F] bg-black p-6 shadow-2xl">
         <div className="mb-6 flex items-center justify-between border-b border-[#1F1F1F] pb-4">
           <div>
             <div className="text-xs text-[#555555] uppercase tracking-widest mb-1">── NEW EVENT</div>
@@ -195,7 +195,7 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
           <div className="grid grid-cols-2 gap-4">
             <div>
             <label className="mb-1.5 block text-xs font-bold text-[#555555] uppercase tracking-widest">
-              SUBMISSIONS OPEN DATE/TIME:
+              SUBMISSIONS OPEN:
             </label>
             <input
               type="datetime-local"
@@ -209,7 +209,7 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-bold text-[#555555] uppercase tracking-widest">
-                SUBMISSIONS CLOSE DATE/TIME:
+                SUBMISSIONS CLOSE:
               </label>
               <input
                 type="datetime-local"
