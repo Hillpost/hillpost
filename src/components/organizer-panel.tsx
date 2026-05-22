@@ -463,23 +463,23 @@ function HackathonInfoSection({
           {isEditingDates ? (
             <div>
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <div className="space-y-1">
+                <div className="space-y-1 w-full sm:w-56">
                   <label className="text-xs text-[#333333] uppercase">Start</label>
-                  <input type="datetime-local" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)} className="tui-input w-auto" />
+                  <input type="datetime-local" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)} className="tui-input" />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 w-full sm:w-56">
                   <label className="text-xs text-[#333333] uppercase">Submissions Open</label>
-                  <input type="datetime-local" value={newSubmissionsStartDate} onChange={(e) => setNewSubmissionsStartDate(e.target.value)} className="tui-input w-auto" placeholder="Same as start" />
+                  <input type="datetime-local" value={newSubmissionsStartDate} onChange={(e) => setNewSubmissionsStartDate(e.target.value)} className="tui-input" placeholder="Same as start" />
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <div className="space-y-1">
+                <div className="space-y-1 w-full sm:w-56">
                   <label className="text-xs text-[#333333] uppercase">Submissions Close</label>
-                  <input type="datetime-local" value={newSubmissionsEndDate} onChange={(e) => setNewSubmissionsEndDate(e.target.value)} className="tui-input w-auto" placeholder="Same as end" />
+                  <input type="datetime-local" value={newSubmissionsEndDate} onChange={(e) => setNewSubmissionsEndDate(e.target.value)} className="tui-input" placeholder="Same as end" />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 w-full sm:w-56">
                   <label className="text-xs text-[#333333] uppercase">End</label>
-                  <input type="datetime-local" value={newEndDate} onChange={(e) => setNewEndDate(e.target.value)} className="tui-input w-auto" />
+                  <input type="datetime-local" value={newEndDate} onChange={(e) => setNewEndDate(e.target.value)} className="tui-input" />
                 </div>
                 <div className="flex gap-2">
                   <button onClick={saveDates} className="px-3 py-1.5 text-xs font-bold text-black bg-[#00FF41] uppercase tracking-wider hover:bg-white transition-colors">SAVE</button>
