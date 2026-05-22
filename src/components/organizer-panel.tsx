@@ -479,7 +479,7 @@ function HackathonInfoSection({
               <div className="flex flex-wrap items-end gap-3">
                 <div className="space-y-1">
                   <label className="text-xs text-[#333333] uppercase">End</label>
-                  <input type="datetime-local" value={newEndDate} onChange={(e) => setNewEndDate(e.target.value)} className="tui-input w-full min-w-[280px]" />
+                  <input type="datetime-local" value={newEndDate} onChange={(e) => setNewEndDate(e.target.value)} className="tui-input min-w-[280px]" />
                 </div>
                 <div className="flex gap-2">
                   <button onClick={saveDates} className="px-3 py-1.5 text-xs font-bold text-black bg-[#00FF41] uppercase tracking-wider hover:bg-white transition-colors">SAVE</button>
