@@ -7,7 +7,6 @@ import { useParams, useRouter, useSearchParams, usePathname } from "next/navigat
 import { useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { useDisplayNamePrompt } from "@/components/display-name-prompt";
-import { format } from "date-fns";
 import React, { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -37,6 +36,12 @@ import { isSafeHttpUrl } from "@/lib/url";
 const ALL_TABS = ["overview", "submissions", "compete", "judge", "manage"] as const;
 type Tab = (typeof ALL_TABS)[number];
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const shortDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "short",
+  timeStyle: "short",
+});
+
+const formatShortDateTime = (timestamp: number) => shortDateTimeFormatter.format(new Date(timestamp));
 
 const roleColor = (role: string) => {
   switch (role) {
@@ -276,6 +281,12 @@ export default function HackathonDetailPage() {
     (role === "competitor" && scoresVisibleToCompetitors);
   const isLive = now >= hackathon.startDate && now <= hackathon.endDate;
   const daysLeft = Math.max(0, Math.ceil((hackathon.endDate - now) / (1000 * 60 * 60 * 24)));
+  const submissionsStartAt = hackathon.submissionsStartDate ?? hackathon.startDate;
+  const submissionsEndAt = hackathon.submissionsEndDate ?? hackathon.endDate;
+  const submissionsMeta =
+    now < submissionsStartAt
+      ? { label: "Submissions open", timestamp: submissionsStartAt }
+      : { label: "Submissions close", timestamp: submissionsEndAt };
 
   const tabs: { id: Tab; label: string; show: boolean; badge?: number }[] = [
     { id: "overview", label: "OVERVIEW", show: true },
@@ -329,6 +340,20 @@ export default function HackathonDetailPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-white uppercase tracking-wide">{hackathon.name}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="tui-badge border-[#555555] text-[#555555]">
+                <Clock className="h-3 w-3" />
+                {hackathon.submissionFrequencyMinutes}min cooldown
+              </span>
+              {role && (
+                <span className={cn("tui-badge", roleColor(role))}>
+                  {role.toUpperCase()}
+                </span>
+              )}
+              <span className="tui-badge border-[#555555] text-[#555555]">
+                {daysLeft} {daysLeft === 1 ? "DAY" : "DAYS"} LEFT
+              </span>
+            </div>
           </div>
           <div className="flex flex-row items-center gap-2 sm:flex-col sm:items-end">
             {isLive ? (
@@ -358,32 +383,11 @@ export default function HackathonDetailPage() {
         <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-[#555555]">
           <span className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
-            {format(new Date(hackathon.startDate), "MMM d, yyyy h:mm a")} —{" "}
-            {format(new Date(hackathon.endDate), "MMM d, yyyy h:mm a")}
+            {formatShortDateTime(hackathon.startDate)} — {formatShortDateTime(hackathon.endDate)}
           </span>
-          {hackathon.submissionsStartDate && hackathon.submissionsStartDate !== hackathon.startDate && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              Submissions open {format(new Date(hackathon.submissionsStartDate), "MMM d, yyyy h:mm a")}
-            </span>
-          )}
-          {hackathon.submissionsEndDate && hackathon.submissionsEndDate !== hackathon.endDate && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              Submissions close {format(new Date(hackathon.submissionsEndDate), "MMM d, yyyy h:mm a")}
-            </span>
-          )}
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            {hackathon.submissionFrequencyMinutes}min cooldown
-          </span>
-          {role && (
-            <span className={cn("tui-badge", roleColor(role))}>
-              {role.toUpperCase()}
-            </span>
-          )}
-          <span className="tui-badge border-[#555555] text-[#555555]">
-            {daysLeft} {daysLeft === 1 ? "DAY" : "DAYS"} LEFT
+            {submissionsMeta.label} {formatShortDateTime(submissionsMeta.timestamp)}
           </span>
         </div>
       </div>
