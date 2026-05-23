@@ -35,7 +35,7 @@ import { isSafeHttpUrl } from "@/lib/url";
 
 const ALL_TABS = ["overview", "submissions", "compete", "judge", "manage"] as const;
 type Tab = (typeof ALL_TABS)[number];
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const ONE_MINUTE_MS = 60 * 1000;
 const shortDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: "short",
   timeStyle: "short",
@@ -85,19 +85,9 @@ export default function HackathonDetailPage() {
   const { requestDisplayName, displayNamePrompt } = useDisplayNamePrompt();
 
   React.useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined;
-    const current = new Date();
-    const nextMidnight = new Date(current);
-    nextMidnight.setHours(24, 0, 0, 0);
-
-    const timeout = setTimeout(() => {
-      setNow(Date.now());
-      interval = setInterval(() => setNow(Date.now()), ONE_DAY_MS);
-    }, nextMidnight.getTime() - current.getTime());
-
+    const interval = setInterval(() => setNow(Date.now()), ONE_MINUTE_MS);
     return () => {
-      clearTimeout(timeout);
-      if (interval) clearInterval(interval);
+      clearInterval(interval);
     };
   }, []);
 
