@@ -312,6 +312,16 @@ body {
   background-color: rgba(0, 140, 36, 0.06) !important;
 }
 
+[data-theme="light"] .public-live-status-pill {
+  color: #00FF41 !important;
+  border-color: rgba(0, 255, 65, 0.3) !important;
+  background-color: rgba(0, 255, 65, 0.06) !important;
+}
+
+[data-theme="light"] .public-live-status-pill .status-pulse {
+  background-color: #00FF41 !important;
+}
+
 /* Tailwind semantic color overrides */
 [data-theme="light"] .text-accent {
   color: var(--t-accent) !important;

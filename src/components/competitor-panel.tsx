@@ -7,13 +7,18 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import { ExternalLink, MessageSquare } from "lucide-react";
 import Link from "next/link";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { SectionSkeleton } from "@/components/skeleton";
 
 interface CompetitorPanelProps {
   hackathonId: Id<"hackathons">;
   hackathon: {
+    startDate: number;
+    endDate: number;
     submissionFrequencyMinutes: number;
+    submissionsStartDate?: number;
+    submissionsEndDate?: number;
     feedbackVisible?: boolean;
     scoresVisible?: boolean | "all" | "judges" | "none";
   };
@@ -226,6 +231,18 @@ function SubmitSection({ hackathonId, hackathon }: CompetitorPanelProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [checkTime, setCheckTime] = useState(() => Date.now());
+  const submissionsOpenAt = hackathon.submissionsStartDate ?? hackathon.startDate;
+  const submissionsCloseAt = hackathon.submissionsEndDate ?? hackathon.endDate;
+
+  useEffect(() => {
+    const now = Date.now();
+    const nextTransitions = [submissionsOpenAt, submissionsCloseAt].filter((ts) => ts > now);
+    if (nextTransitions.length === 0) return;
+    const nextTransition = Math.min(...nextTransitions);
+    const timeout = setTimeout(() => setCheckTime(Date.now()), nextTransition - now);
+    return () => clearTimeout(timeout);
+  }, [submissionsOpenAt, submissionsCloseAt]);
 
   useEffect(() => {
     if (latestSubmission) {
@@ -309,6 +326,8 @@ function SubmitSection({ hackathonId, hackathon }: CompetitorPanelProps) {
   const cooldownSeconds = totalSeconds % 60;
   const cooldownStr = cooldownMinutes > 0 ? `${String(cooldownMinutes).padStart(2, "0")}:${String(cooldownSeconds).padStart(2, "0")}` : `00:${String(cooldownSeconds).padStart(2, "0")}`;
 
+  const submissionsNotOpenYet = checkTime < submissionsOpenAt;
+  const submissionsClosed = checkTime > submissionsCloseAt;
   if (myTeam === undefined || (myTeam !== null && latestSubmission === undefined)) {
     return <SectionSkeleton title="PROJECT DETAILS" />;
   }
@@ -325,6 +344,14 @@ function SubmitSection({ hackathonId, hackathon }: CompetitorPanelProps) {
       {!myTeam ? (
         <p className="text-xs text-[#555555] uppercase tracking-wider">
           JOIN A TEAM BEFORE SUBMITTING A PROJECT.
+        </p>
+      ) : submissionsNotOpenYet ? (
+        <p className="text-xs text-[#555555] uppercase tracking-wider">
+          SUBMISSIONS OPEN ON {format(new Date(submissionsOpenAt), "MMM d, yyyy h:mm a")}.
+        </p>
+      ) : submissionsClosed ? (
+        <p className="text-xs text-[#555555] uppercase tracking-wider">
+          SUBMISSIONS CLOSED ON {format(new Date(submissionsCloseAt), "MMM d, yyyy h:mm a")}.
         </p>
       ) : (
         <>

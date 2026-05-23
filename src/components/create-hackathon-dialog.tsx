@@ -11,7 +11,7 @@ import { X, Lock, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isSafeHttpUrl } from "@/lib/url";
 import { useDisplayNamePrompt } from "@/components/display-name-prompt";
-import { formatDateForInput, parseDateInputToTimestamp } from "@/lib/date-input";
+import { formatDateTimeForInput, parseDateTimeInputToTimestamp } from "@/lib/date-input";
 
 interface CreateHackathonDialogProps {
   isOpen: boolean;
@@ -24,12 +24,14 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
   const { isAuthenticated } = useConvexAuth();
   const createHackathon = useMutation(api.hackathons.create);
 
-  const today = formatDateForInput(new Date());
+  const now = formatDateTimeForInput(new Date());
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState(today);
-  const [endDate, setEndDate] = useState(today);
+  const [startDate, setStartDate] = useState(now);
+  const [submissionsStartDate, setSubmissionsStartDate] = useState("");
+  const [submissionsEndDate, setSubmissionsEndDate] = useState("");
+  const [endDate, setEndDate] = useState(now);
   const [submissionFrequency, setSubmissionFrequency] = useState(60);
   const [isPublic, setIsPublic] = useState(false);
   const [bannerImageUrl, setBannerImageUrl] = useState("");
@@ -39,8 +41,10 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
   const resetForm = () => {
     setName("");
     setDescription("");
-    setStartDate(today);
-    setEndDate(today);
+    setStartDate(now);
+    setSubmissionsStartDate("");
+    setSubmissionsEndDate("");
+    setEndDate(now);
     setSubmissionFrequency(60);
     setIsPublic(false);
     setBannerImageUrl("");
@@ -63,6 +67,30 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
       toast.error("Banner image URL must be a valid http(s) URL");
       return;
     }
+    const start = parseDateTimeInputToTimestamp(startDate);
+    const end = parseDateTimeInputToTimestamp(endDate);
+    const submissionsStart = submissionsStartDate
+      ? parseDateTimeInputToTimestamp(submissionsStartDate)
+      : start;
+    const submissionsEnd = submissionsEndDate
+      ? parseDateTimeInputToTimestamp(submissionsEndDate)
+      : end;
+    if (end < start) {
+      toast.error("End date/time must be on or after start date/time");
+      return;
+    }
+    if (submissionsStart < start) {
+      toast.error("Submissions cannot open before the hackathon starts");
+      return;
+    }
+    if (submissionsEnd > end) {
+      toast.error("Submissions cannot close after the hackathon ends");
+      return;
+    }
+    if (submissionsStart > submissionsEnd) {
+      toast.error("Submissions cannot close before they open");
+      return;
+    }
     const userName = await requestDisplayName(user);
     if (!userName) {
       return;
@@ -72,8 +100,10 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
       const hackathonId = await createHackathon({
         name,
         description,
-        startDate: parseDateInputToTimestamp(startDate),
-        endDate: parseDateInputToTimestamp(endDate),
+        startDate: start,
+        submissionsStartDate: submissionsStartDate ? submissionsStart : undefined,
+        submissionsEndDate: submissionsEndDate ? submissionsEnd : undefined,
+        endDate: end,
         submissionFrequencyMinutes: submissionFrequency,
         openGraphImageUrl: trimmedBanner || undefined,
         isPublic,
@@ -93,9 +123,9 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/80" onClick={onClose} />
-        <div className="relative z-10 w-full max-w-lg border border-[#1F1F1F] bg-black p-6 shadow-2xl">
+        <div className="relative z-10 max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border border-[#1F1F1F] bg-black p-6 shadow-2xl">
         <div className="mb-6 flex items-center justify-between border-b border-[#1F1F1F] pb-4">
           <div>
             <div className="text-xs text-[#555555] uppercase tracking-widest mb-1">── NEW EVENT</div>
@@ -138,10 +168,10 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1.5 block text-xs font-bold text-[#555555] uppercase tracking-widest">
-                START DATE: <span className="text-[#FF6600]">*</span>
+                START DATE/TIME: <span className="text-[#FF6600]">*</span>
               </label>
               <input
-                type="date"
+                type="datetime-local"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="tui-input"
@@ -150,15 +180,46 @@ export function CreateHackathonDialog({ isOpen, onClose }: CreateHackathonDialog
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-bold text-[#555555] uppercase tracking-widest">
-                END DATE: <span className="text-[#FF6600]">*</span>
+                END DATE/TIME: <span className="text-[#FF6600]">*</span>
               </label>
               <input
-                type="date"
+                type="datetime-local"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="tui-input"
                 required
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+            <label className="mb-1.5 block text-xs font-bold text-[#555555] uppercase tracking-widest">
+              SUBMISSIONS OPEN:
+            </label>
+            <input
+              type="datetime-local"
+              value={submissionsStartDate}
+              onChange={(e) => setSubmissionsStartDate(e.target.value)}
+              className="tui-input"
+            />
+            <p className="mt-1 text-xs text-[#333333]">
+              Defaults to event start if blank.
+            </p>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-bold text-[#555555] uppercase tracking-widest">
+                SUBMISSIONS CLOSE:
+              </label>
+              <input
+                type="datetime-local"
+                value={submissionsEndDate}
+                onChange={(e) => setSubmissionsEndDate(e.target.value)}
+                className="tui-input"
+              />
+              <p className="mt-1 text-xs text-[#333333]">
+                Defaults to event end if blank.
+              </p>
             </div>
           </div>
 

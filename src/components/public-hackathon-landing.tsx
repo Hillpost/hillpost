@@ -17,6 +17,8 @@ type PublicHackathon = {
   name: string;
   description: string;
   startDate: number;
+  submissionsStartDate?: number;
+  submissionsEndDate?: number;
   endDate: number;
   isActive: boolean;
   isPublic?: boolean;
@@ -53,6 +55,9 @@ export interface PublicHackathonLandingProps {
   categories: PublicCategory[] | undefined;
   sponsors: PublicSponsor[] | undefined;
   publicJudges: PublicJudge[] | undefined;
+  isAuthenticated?: boolean;
+  isJoining?: boolean;
+  onJoin?: () => void | Promise<void>;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -87,17 +92,39 @@ function getCountdownLabel(startDate: number, endDate: number, status: EventStat
   return "Event ended";
 }
 
-// Primary CTA button — always signs in and returns to this hackathon
-function RegisterButton({ hackathonId, large }: { hackathonId: Id<"hackathons">; large?: boolean }) {
+// Primary CTA button: sign out visitors in, signed-in visitors join directly.
+function RegisterButton({
+  hackathonId,
+  large,
+  isAuthenticated,
+  isJoining,
+  onJoin,
+}: {
+  hackathonId: Id<"hackathons">;
+  large?: boolean;
+  isAuthenticated?: boolean;
+  isJoining?: boolean;
+  onJoin?: () => void | Promise<void>;
+}) {
+  const className = cn(
+    "group inline-flex items-center gap-2 border border-[#00FF41] bg-[#00FF41] font-bold text-black uppercase tracking-wider transition-all hover:bg-white hover:border-white disabled:cursor-not-allowed disabled:opacity-60",
+    large ? "px-8 py-3.5 text-sm" : "w-full justify-center px-6 py-3 text-xs"
+  );
+  const label = isJoining ? "Joining..." : "Register as Competitor";
+
+  if (isAuthenticated && onJoin) {
+    return (
+      <button type="button" onClick={onJoin} disabled={isJoining} className={className}>
+        {label}
+        <ArrowRight className={cn("transition-transform group-hover:translate-x-0.5", large ? "h-4 w-4" : "h-3.5 w-3.5")} />
+      </button>
+    );
+  }
+
   return (
     <SignInButton mode="redirect" forceRedirectUrl={`/hackathon/${hackathonId}`}>
-      <button
-        className={cn(
-          "group inline-flex items-center gap-2 border border-[#00FF41] bg-[#00FF41] font-bold text-black uppercase tracking-wider transition-all hover:bg-white hover:border-white",
-          large ? "px-8 py-3.5 text-sm" : "w-full justify-center px-6 py-3 text-xs"
-        )}
-      >
-        Register as Competitor
+      <button className={className}>
+        {label}
         <ArrowRight className={cn("transition-transform group-hover:translate-x-0.5", large ? "h-4 w-4" : "h-3.5 w-3.5")} />
       </button>
     </SignInButton>
@@ -134,6 +161,9 @@ export function PublicHackathonLanding({
   categories,
   sponsors,
   publicJudges,
+  isAuthenticated,
+  isJoining,
+  onJoin,
 }: PublicHackathonLandingProps) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -141,7 +171,8 @@ export function PublicHackathonLanding({
     return () => clearInterval(interval);
   }, []);
   const status = getEventStatus(hackathon.startDate, hackathon.endDate, now);
-  const isOpen = status !== "ended";
+  const publicRegistrationCloseAt = hackathon.submissionsEndDate ?? hackathon.endDate;
+  const isPublicRegistrationOpen = now <= publicRegistrationCloseAt;
   const countdown = getCountdownLabel(hackathon.startDate, hackathon.endDate, status, now);
   const totalPoints = categories?.reduce((sum, c) => sum + c.maxScore, 0) ?? 0;
 
@@ -171,13 +202,13 @@ export function PublicHackathonLanding({
                 {hackathon.name}
               </h1>
               <p className="mt-3 max-w-xl text-sm text-white/60">
-                {format(new Date(hackathon.startDate), "MMMM d")} –{" "}
-                {format(new Date(hackathon.endDate), "MMMM d, yyyy")}
+                {format(new Date(hackathon.startDate), "MMMM d, yyyy h:mm a")} –{" "}
+                {format(new Date(hackathon.endDate), "MMMM d, yyyy h:mm a")}
                 &nbsp;·&nbsp;Public event
               </p>
-              {isOpen && (
+              {isPublicRegistrationOpen && (
                 <div className="mt-6">
-                  <RegisterButton hackathonId={hackathonId} large />
+                  <RegisterButton hackathonId={hackathonId} isAuthenticated={isAuthenticated} isJoining={isJoining} onJoin={onJoin} large />
                 </div>
               )}
             </motion.div>
@@ -185,7 +216,7 @@ export function PublicHackathonLanding({
         </div>
       ) : (
         /* No-image typographic hero */
-        <div className="relative overflow-hidden dot-grid px-6 pt-20 pb-16 sm:px-12 sm:pt-28 sm:pb-20">
+        <div className="relative overflow-hidden dot-grid pt-20 pb-16 sm:pt-28 sm:pb-20">
           {/* Green glow behind the title */}
           <div className="pointer-events-none absolute -top-32 left-1/2 h-96 w-[600px] -translate-x-1/2 rounded-full bg-[#00FF41] opacity-[0.04] blur-[120px]" />
           <div className="pointer-events-none absolute inset-3 hidden sm:block">
@@ -198,22 +229,22 @@ export function PublicHackathonLanding({
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="relative z-10 mx-auto max-w-4xl"
+            className="relative z-10 mx-auto max-w-6xl px-4 sm:px-8"
           >
             <StatusPill status={status} countdown={countdown} />
             <h1 className="mt-5 text-4xl font-bold uppercase leading-none tracking-tight text-white sm:text-6xl md:text-7xl">
               {hackathon.name}
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#777777]">
-              {format(new Date(hackathon.startDate), "MMMM d")} –{" "}
-              {format(new Date(hackathon.endDate), "MMMM d, yyyy")}
+              {format(new Date(hackathon.startDate), "MMMM d, yyyy h:mm a")} –{" "}
+              {format(new Date(hackathon.endDate), "MMMM d, yyyy h:mm a")}
               &nbsp;·&nbsp;Public &amp; free to enter
             </p>
-            {isOpen && (
+            {isPublicRegistrationOpen && (
               <div className="mt-8 flex flex-col items-start gap-2">
-                <RegisterButton hackathonId={hackathonId} large />
+                <RegisterButton hackathonId={hackathonId} isAuthenticated={isAuthenticated} isJoining={isJoining} onJoin={onJoin} large />
                 <p className="text-[11px] text-[#333333] uppercase tracking-wider">
-                  No invite code · just sign in
+                  {isAuthenticated ? "No invite code · join instantly" : "No invite code · just sign in"}
                 </p>
               </div>
             )}
@@ -253,26 +284,46 @@ export function PublicHackathonLanding({
                 <ol className="space-y-6 pl-6">
                   {[
                     {
-                      label: "Registration opens",
-                      date: "Now — public & free",
-                      done: true,
+                      label: "Public registration",
+                      date: `Until ${format(new Date(publicRegistrationCloseAt), "EEEE, MMMM d, yyyy h:mm a")}`,
+                      done: !isPublicRegistrationOpen,
                       accent: "#00FF41",
-                      active: isOpen,
+                      active: isPublicRegistrationOpen,
                     },
                     {
                       label: "Hacking begins",
-                      date: format(new Date(hackathon.startDate), "EEEE, MMMM d, yyyy"),
+                      date: format(new Date(hackathon.startDate), "EEEE, MMMM d, yyyy h:mm a"),
                       done: now >= hackathon.startDate,
                       accent: "#00B4FF",
                       active: false,
                     },
+                    ...(hackathon.submissionsStartDate && hackathon.submissionsStartDate !== hackathon.startDate
+                      ? [{
+                          label: "Submissions open",
+                          date: format(new Date(hackathon.submissionsStartDate), "EEEE, MMMM d, yyyy h:mm a"),
+                          done: now >= hackathon.submissionsStartDate,
+                          accent: "#00FF41",
+                          active: now >= hackathon.startDate && now < hackathon.submissionsStartDate,
+                        }]
+                      : []),
                     {
                       label: "Submissions close",
-                      date: format(new Date(hackathon.endDate), "EEEE, MMMM d, yyyy"),
-                      done: now >= hackathon.endDate,
+                      date: format(new Date(hackathon.submissionsEndDate ?? hackathon.endDate), "EEEE, MMMM d, yyyy h:mm a"),
+                      done: now >= (hackathon.submissionsEndDate ?? hackathon.endDate),
                       accent: "#FF6600",
-                      active: false,
+                      active:
+                        now >= (hackathon.submissionsStartDate ?? hackathon.startDate) &&
+                        now < (hackathon.submissionsEndDate ?? hackathon.endDate),
                     },
+                    ...(hackathon.submissionsEndDate && hackathon.submissionsEndDate !== hackathon.endDate
+                      ? [{
+                          label: "Event ends",
+                          date: format(new Date(hackathon.endDate), "EEEE, MMMM d, yyyy h:mm a"),
+                          done: now >= hackathon.endDate,
+                          accent: "#FF6600",
+                          active: false,
+                        }]
+                      : []),
                   ].map(({ label, date, done, accent, active }) => (
                     <li key={label} className="relative flex items-start gap-4">
                       {/* Dot */}
@@ -511,24 +562,34 @@ export function PublicHackathonLanding({
                 <StatusPill status={status} countdown={countdown} compact />
               </div>
 
-              {isOpen ? (
+              {isPublicRegistrationOpen ? (
                 <>
-                  <RegisterButton hackathonId={hackathonId} />
+                  <RegisterButton hackathonId={hackathonId} isAuthenticated={isAuthenticated} isJoining={isJoining} onJoin={onJoin} />
                   <p className="mt-2.5 text-center text-[10px] text-[#333333] uppercase tracking-wider">
                     Public · No invite code
                   </p>
                 </>
               ) : (
                 <p className="py-3 text-center text-xs text-[#555555] uppercase tracking-wider">
-                  This event has ended.
+                  Public registration is closed.
                 </p>
               )}
 
               <div className="mt-4 border-t border-[#1F1F1F] pt-4 space-y-3">
                 <StatRow icon={<Clock className="h-3.5 w-3.5" />} label="Date">
-                  {format(new Date(hackathon.startDate), "MMM d")} –{" "}
-                  {format(new Date(hackathon.endDate), "MMM d, yyyy")}
+                  {format(new Date(hackathon.startDate), "MMM d, yyyy h:mm a")} –{" "}
+                  {format(new Date(hackathon.endDate), "MMM d, yyyy h:mm a")}
                 </StatRow>
+                {hackathon.submissionsStartDate && hackathon.submissionsStartDate !== hackathon.startDate && (
+                  <StatRow icon={<Clock className="h-3.5 w-3.5" />} label="Submissions open">
+                    {format(new Date(hackathon.submissionsStartDate), "MMM d, yyyy h:mm a")}
+                  </StatRow>
+                )}
+                {hackathon.submissionsEndDate && hackathon.submissionsEndDate !== hackathon.endDate && (
+                  <StatRow icon={<Clock className="h-3.5 w-3.5" />} label="Submissions close">
+                    {format(new Date(hackathon.submissionsEndDate), "MMM d, yyyy h:mm a")}
+                  </StatRow>
+                )}
                 {(categories?.length ?? 0) > 0 && (
                   <StatRow icon={<Zap className="h-3.5 w-3.5" />} label="Categories">
                     {categories!.length} judging {categories!.length === 1 ? "category" : "categories"}
@@ -578,9 +639,9 @@ export function PublicHackathonLanding({
       </div>{/* end body */}
 
       {/* ── Bottom CTA bar (mobile-first, for when sidebar is off-screen) ── */}
-      {isOpen && (
+      {isPublicRegistrationOpen && (
         <div className="sticky bottom-0 z-40 border-t border-[#1F1F1F] bg-black/95 px-4 py-3 backdrop-blur-sm lg:hidden">
-          <RegisterButton hackathonId={hackathonId} />
+          <RegisterButton hackathonId={hackathonId} isAuthenticated={isAuthenticated} isJoining={isJoining} onJoin={onJoin} />
         </div>
       )}
 
@@ -596,6 +657,7 @@ function StatusPill({ status, countdown, compact }: { status: EventStatus; count
       className={cn(
         "inline-flex items-center gap-1.5 font-bold uppercase tracking-widest",
         compact ? "text-[9px]" : "border px-3 py-1 text-[10px]",
+        status === "live" && !compact && "public-live-status-pill",
         status === "live"
           ? compact ? "text-[#00FF41]" : "border-[#00FF41]/30 bg-[#00FF4110] text-[#00FF41]"
           : status === "upcoming"

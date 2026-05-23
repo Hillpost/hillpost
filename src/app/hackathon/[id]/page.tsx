@@ -7,7 +7,6 @@ import { useParams, useRouter, useSearchParams, usePathname } from "next/navigat
 import { useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { useDisplayNamePrompt } from "@/components/display-name-prompt";
-import { format } from "date-fns";
 import React, { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -36,7 +35,13 @@ import { isSafeHttpUrl } from "@/lib/url";
 
 const ALL_TABS = ["overview", "submissions", "compete", "judge", "manage"] as const;
 type Tab = (typeof ALL_TABS)[number];
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const ONE_MINUTE_MS = 60 * 1000;
+const shortDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "short",
+  timeStyle: "short",
+});
+
+const formatShortDateTime = (timestamp: number) => shortDateTimeFormatter.format(new Date(timestamp));
 
 const roleColor = (role: string) => {
   switch (role) {
@@ -55,12 +60,13 @@ export default function HackathonDetailPage() {
   const hackathon = useQuery(api.hackathons.get, { hackathonId });
   const membership = useQuery(api.members.getMyMembership, { hackathonId });
   const role = membership?.role;
+  const showPublicLanding = hackathon?.isPublic === true && !role;
   const publicJudges = useQuery(api.members.listPublicJudges, { hackathonId });
 
-  const submissions = useQuery(api.submissions.list, { hackathonId });
+  const submissions = useQuery(api.submissions.list, showPublicLanding ? "skip" : { hackathonId });
   const allMembers = useQuery(api.members.listMembers, role === "organizer" ? { hackathonId } : "skip");
   const categories = useQuery(api.categories.list, { hackathonId });
-  const tracks = useQuery(api.tracks.list, { hackathonId });
+  const tracks = useQuery(api.tracks.list, showPublicLanding ? "skip" : { hackathonId });
   const sponsors = useQuery(api.sponsors.list, { hackathonId });
   const featuredSponsors = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "featured") ?? [];
   const largeSponsors = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "large") ?? [];
@@ -79,19 +85,9 @@ export default function HackathonDetailPage() {
   const { requestDisplayName, displayNamePrompt } = useDisplayNamePrompt();
 
   React.useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined;
-    const current = new Date();
-    const nextMidnight = new Date(current);
-    nextMidnight.setHours(24, 0, 0, 0);
-
-    const timeout = setTimeout(() => {
-      setNow(Date.now());
-      interval = setInterval(() => setNow(Date.now()), ONE_DAY_MS);
-    }, nextMidnight.getTime() - current.getTime());
-
+    const interval = setInterval(() => setNow(Date.now()), ONE_MINUTE_MS);
     return () => {
-      clearTimeout(timeout);
-      if (interval) clearInterval(interval);
+      clearInterval(interval);
     };
   }, []);
 
@@ -185,6 +181,11 @@ export default function HackathonDetailPage() {
       toast.error("Please sign in first");
       return;
     }
+    const submissionsCloseAt = hackathon?.submissionsEndDate ?? hackathon?.endDate;
+    if (submissionsCloseAt !== undefined && Date.now() > submissionsCloseAt) {
+      toast.error("Public registration is closed. Use a join code from the organizer.");
+      return;
+    }
 
     const userName = await requestDisplayName(user, { confirm: true });
     if (!userName) {
@@ -246,16 +247,22 @@ export default function HackathonDetailPage() {
     );
   }
 
-  // Unauthenticated visitors of a public hackathon get a purpose-built landing page.
-  if (!isAuthenticated && hackathon.isPublic === true) {
+  // Public hackathons use the marketing/registration landing until the caller joins.
+  if (showPublicLanding) {
     return (
-      <PublicHackathonLanding
-        hackathon={hackathon}
-        hackathonId={hackathonId}
-        categories={categories}
-        sponsors={sponsors}
-        publicJudges={publicJudges}
-      />
+      <>
+        <PublicHackathonLanding
+          hackathon={hackathon}
+          hackathonId={hackathonId}
+          categories={categories}
+          sponsors={sponsors}
+          publicJudges={publicJudges}
+          isAuthenticated={isAuthenticated}
+          isJoining={isJoiningPublic}
+          onJoin={handlePublicJoin}
+        />
+        {displayNamePrompt}
+      </>
     );
   }
 
@@ -276,6 +283,12 @@ export default function HackathonDetailPage() {
     (role === "competitor" && scoresVisibleToCompetitors);
   const isLive = now >= hackathon.startDate && now <= hackathon.endDate;
   const daysLeft = Math.max(0, Math.ceil((hackathon.endDate - now) / (1000 * 60 * 60 * 24)));
+  const submissionsStartAt = hackathon.submissionsStartDate ?? hackathon.startDate;
+  const submissionsEndAt = hackathon.submissionsEndDate ?? hackathon.endDate;
+  const submissionsMeta =
+    now < submissionsStartAt
+      ? { label: "Submissions open", timestamp: submissionsStartAt }
+      : { label: "Submissions close", timestamp: submissionsEndAt };
 
   const tabs: { id: Tab; label: string; show: boolean; badge?: number }[] = [
     { id: "overview", label: "OVERVIEW", show: true },
@@ -329,6 +342,20 @@ export default function HackathonDetailPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-white uppercase tracking-wide">{hackathon.name}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="tui-badge border-[#555555] text-[#555555]">
+                <Clock className="h-3 w-3" />
+                {hackathon.submissionFrequencyMinutes}min cooldown
+              </span>
+              {role && (
+                <span className={cn("tui-badge", roleColor(role))}>
+                  {role.toUpperCase()}
+                </span>
+              )}
+              <span className="tui-badge border-[#555555] text-[#555555]">
+                {daysLeft} {daysLeft === 1 ? "DAY" : "DAYS"} LEFT
+              </span>
+            </div>
           </div>
           <div className="flex flex-row items-center gap-2 sm:flex-col sm:items-end">
             {isLive ? (
@@ -358,20 +385,11 @@ export default function HackathonDetailPage() {
         <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-[#555555]">
           <span className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
-            {format(new Date(hackathon.startDate), "MMM d, yyyy")} —{" "}
-            {format(new Date(hackathon.endDate), "MMM d, yyyy")}
+            {formatShortDateTime(hackathon.startDate)} — {formatShortDateTime(hackathon.endDate)}
           </span>
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            {hackathon.submissionFrequencyMinutes}min cooldown
-          </span>
-          {role && (
-            <span className={cn("tui-badge", roleColor(role))}>
-              {role.toUpperCase()}
-            </span>
-          )}
-          <span className="tui-badge border-[#555555] text-[#555555]">
-            {daysLeft} {daysLeft === 1 ? "DAY" : "DAYS"} LEFT
+            {submissionsMeta.label} {formatShortDateTime(submissionsMeta.timestamp)}
           </span>
         </div>
       </div>

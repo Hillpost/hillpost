@@ -124,6 +124,16 @@ export const create = mutation({
       throw new Error("Hackathon not found");
     }
 
+    // Check if submissions are open yet
+    const submissionsOpenAt = hackathon.submissionsStartDate ?? hackathon.startDate;
+    const submissionsCloseAt = hackathon.submissionsEndDate ?? hackathon.endDate;
+    if (Date.now() < submissionsOpenAt) {
+      throw new Error("Submissions are not open yet");
+    }
+    if (Date.now() > submissionsCloseAt) {
+      throw new Error("Submissions are closed");
+    }
+
     const existingSubmission = await ctx.db
       .query("submissions")
       .withIndex("by_hackathonId_teamId", (q) =>
@@ -231,6 +241,19 @@ export const updateDetails = mutation({
 
     if (!membership || membership.role !== "competitor" || membership.teamId !== submission.teamId) {
       throw new Error("Unauthorized to edit this project");
+    }
+
+    const hackathon = await ctx.db.get(submission.hackathonId);
+    if (!hackathon) {
+      throw new Error("Hackathon not found");
+    }
+    const submissionsOpenAt = hackathon.submissionsStartDate ?? hackathon.startDate;
+    const submissionsCloseAt = hackathon.submissionsEndDate ?? hackathon.endDate;
+    if (Date.now() < submissionsOpenAt) {
+      throw new Error("Submissions are not open yet");
+    }
+    if (Date.now() > submissionsCloseAt) {
+      throw new Error("Submissions are closed");
     }
 
     const name = requireNonEmpty(args.name, "Name");
