@@ -628,6 +628,7 @@ function StatusPill({ status, countdown, compact }: { status: EventStatus; count
       className={cn(
         "inline-flex items-center gap-1.5 font-bold uppercase tracking-widest",
         compact ? "text-[9px]" : "border px-3 py-1 text-[10px]",
+        status === "live" && !compact && "public-live-status-pill",
         status === "live"
           ? compact ? "text-[#00FF41]" : "border-[#00FF41]/30 bg-[#00FF4110] text-[#00FF41]"
           : status === "upcoming"
