@@ -191,6 +191,11 @@ export default function HackathonDetailPage() {
       toast.error("Please sign in first");
       return;
     }
+    const submissionsCloseAt = hackathon?.submissionsEndDate ?? hackathon?.endDate;
+    if (submissionsCloseAt !== undefined && Date.now() > submissionsCloseAt) {
+      toast.error("Public registration is closed. Use a join code from the organizer.");
+      return;
+    }
 
     const userName = await requestDisplayName(user, { confirm: true });
     if (!userName) {

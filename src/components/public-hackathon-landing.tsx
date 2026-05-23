@@ -171,7 +171,8 @@ export function PublicHackathonLanding({
     return () => clearInterval(interval);
   }, []);
   const status = getEventStatus(hackathon.startDate, hackathon.endDate, now);
-  const isOpen = status !== "ended";
+  const publicRegistrationCloseAt = hackathon.submissionsEndDate ?? hackathon.endDate;
+  const isPublicRegistrationOpen = now <= publicRegistrationCloseAt;
   const countdown = getCountdownLabel(hackathon.startDate, hackathon.endDate, status, now);
   const totalPoints = categories?.reduce((sum, c) => sum + c.maxScore, 0) ?? 0;
 
@@ -205,7 +206,7 @@ export function PublicHackathonLanding({
                 {format(new Date(hackathon.endDate), "MMMM d, yyyy h:mm a")}
                 &nbsp;·&nbsp;Public event
               </p>
-              {isOpen && (
+              {isPublicRegistrationOpen && (
                 <div className="mt-6">
                   <RegisterButton hackathonId={hackathonId} isAuthenticated={isAuthenticated} isJoining={isJoining} onJoin={onJoin} large />
                 </div>
@@ -239,7 +240,7 @@ export function PublicHackathonLanding({
               {format(new Date(hackathon.endDate), "MMMM d, yyyy h:mm a")}
               &nbsp;·&nbsp;Public &amp; free to enter
             </p>
-            {isOpen && (
+            {isPublicRegistrationOpen && (
               <div className="mt-8 flex flex-col items-start gap-2">
                 <RegisterButton hackathonId={hackathonId} isAuthenticated={isAuthenticated} isJoining={isJoining} onJoin={onJoin} large />
                 <p className="text-[11px] text-[#333333] uppercase tracking-wider">
@@ -283,11 +284,11 @@ export function PublicHackathonLanding({
                 <ol className="space-y-6 pl-6">
                   {[
                     {
-                      label: "Registration opens",
-                      date: "Now — public & free",
-                      done: true,
+                      label: "Public registration",
+                      date: `Until ${format(new Date(publicRegistrationCloseAt), "EEEE, MMMM d, yyyy h:mm a")}`,
+                      done: !isPublicRegistrationOpen,
                       accent: "#00FF41",
-                      active: isOpen,
+                      active: isPublicRegistrationOpen,
                     },
                     {
                       label: "Hacking begins",
@@ -561,7 +562,7 @@ export function PublicHackathonLanding({
                 <StatusPill status={status} countdown={countdown} compact />
               </div>
 
-              {isOpen ? (
+              {isPublicRegistrationOpen ? (
                 <>
                   <RegisterButton hackathonId={hackathonId} isAuthenticated={isAuthenticated} isJoining={isJoining} onJoin={onJoin} />
                   <p className="mt-2.5 text-center text-[10px] text-[#333333] uppercase tracking-wider">
@@ -570,7 +571,7 @@ export function PublicHackathonLanding({
                 </>
               ) : (
                 <p className="py-3 text-center text-xs text-[#555555] uppercase tracking-wider">
-                  This event has ended.
+                  Public registration is closed.
                 </p>
               )}
 
@@ -638,7 +639,7 @@ export function PublicHackathonLanding({
       </div>{/* end body */}
 
       {/* ── Bottom CTA bar (mobile-first, for when sidebar is off-screen) ── */}
-      {isOpen && (
+      {isPublicRegistrationOpen && (
         <div className="sticky bottom-0 z-40 border-t border-[#1F1F1F] bg-black/95 px-4 py-3 backdrop-blur-sm lg:hidden">
           <RegisterButton hackathonId={hackathonId} isAuthenticated={isAuthenticated} isJoining={isJoining} onJoin={onJoin} />
         </div>

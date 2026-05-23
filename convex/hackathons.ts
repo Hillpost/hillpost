@@ -553,10 +553,13 @@ export const joinPublic = mutation({
     const hackathon = await ctx.db.get(args.hackathonId);
     if (
       !hackathon ||
-      hackathon.isPublic !== true ||
-      Date.now() > hackathon.endDate
+      hackathon.isPublic !== true
     ) {
       throw new Error("Hackathon is not publicly joinable");
+    }
+    const submissionsCloseAt = hackathon.submissionsEndDate ?? hackathon.endDate;
+    if (Date.now() > submissionsCloseAt) {
+      throw new Error("Public registration is closed. Use an invite code from the organizer.");
     }
 
     const existing = await ctx.db
