@@ -187,7 +187,7 @@ export function PublicHackathonLanding({
         </div>
       ) : (
         /* No-image typographic hero */
-        <div className="relative overflow-hidden dot-grid px-6 pt-20 pb-16 sm:px-12 sm:pt-28 sm:pb-20">
+        <div className="relative overflow-hidden dot-grid pt-20 pb-16 sm:pt-28 sm:pb-20">
           {/* Green glow behind the title */}
           <div className="pointer-events-none absolute -top-32 left-1/2 h-96 w-[600px] -translate-x-1/2 rounded-full bg-[#00FF41] opacity-[0.04] blur-[120px]" />
           <div className="pointer-events-none absolute inset-3 hidden sm:block">
@@ -200,7 +200,7 @@ export function PublicHackathonLanding({
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="relative z-10 mx-auto max-w-4xl"
+            className="relative z-10 mx-auto max-w-6xl px-4 sm:px-8"
           >
             <StatusPill status={status} countdown={countdown} />
             <h1 className="mt-5 text-4xl font-bold uppercase leading-none tracking-tight text-white sm:text-6xl md:text-7xl">
