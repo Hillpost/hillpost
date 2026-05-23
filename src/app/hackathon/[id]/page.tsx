@@ -60,12 +60,13 @@ export default function HackathonDetailPage() {
   const hackathon = useQuery(api.hackathons.get, { hackathonId });
   const membership = useQuery(api.members.getMyMembership, { hackathonId });
   const role = membership?.role;
+  const showPublicLanding = hackathon?.isPublic === true && !role;
   const publicJudges = useQuery(api.members.listPublicJudges, { hackathonId });
 
-  const submissions = useQuery(api.submissions.list, { hackathonId });
+  const submissions = useQuery(api.submissions.list, showPublicLanding ? "skip" : { hackathonId });
   const allMembers = useQuery(api.members.listMembers, role === "organizer" ? { hackathonId } : "skip");
   const categories = useQuery(api.categories.list, { hackathonId });
-  const tracks = useQuery(api.tracks.list, { hackathonId });
+  const tracks = useQuery(api.tracks.list, showPublicLanding ? "skip" : { hackathonId });
   const sponsors = useQuery(api.sponsors.list, { hackathonId });
   const featuredSponsors = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "featured") ?? [];
   const largeSponsors = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "large") ?? [];
@@ -251,16 +252,22 @@ export default function HackathonDetailPage() {
     );
   }
 
-  // Unauthenticated visitors of a public hackathon get a purpose-built landing page.
-  if (!isAuthenticated && hackathon.isPublic === true) {
+  // Public hackathons use the marketing/registration landing until the caller joins.
+  if (showPublicLanding) {
     return (
-      <PublicHackathonLanding
-        hackathon={hackathon}
-        hackathonId={hackathonId}
-        categories={categories}
-        sponsors={sponsors}
-        publicJudges={publicJudges}
-      />
+      <>
+        <PublicHackathonLanding
+          hackathon={hackathon}
+          hackathonId={hackathonId}
+          categories={categories}
+          sponsors={sponsors}
+          publicJudges={publicJudges}
+          isAuthenticated={isAuthenticated}
+          isJoining={isJoiningPublic}
+          onJoin={handlePublicJoin}
+        />
+        {displayNamePrompt}
+      </>
     );
   }
 

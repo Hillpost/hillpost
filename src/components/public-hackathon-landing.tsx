@@ -55,6 +55,9 @@ export interface PublicHackathonLandingProps {
   categories: PublicCategory[] | undefined;
   sponsors: PublicSponsor[] | undefined;
   publicJudges: PublicJudge[] | undefined;
+  isAuthenticated?: boolean;
+  isJoining?: boolean;
+  onJoin?: () => void | Promise<void>;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -89,17 +92,39 @@ function getCountdownLabel(startDate: number, endDate: number, status: EventStat
   return "Event ended";
 }
 
-// Primary CTA button — always signs in and returns to this hackathon
-function RegisterButton({ hackathonId, large }: { hackathonId: Id<"hackathons">; large?: boolean }) {
+// Primary CTA button: sign out visitors in, signed-in visitors join directly.
+function RegisterButton({
+  hackathonId,
+  large,
+  isAuthenticated,
+  isJoining,
+  onJoin,
+}: {
+  hackathonId: Id<"hackathons">;
+  large?: boolean;
+  isAuthenticated?: boolean;
+  isJoining?: boolean;
+  onJoin?: () => void | Promise<void>;
+}) {
+  const className = cn(
+    "group inline-flex items-center gap-2 border border-[#00FF41] bg-[#00FF41] font-bold text-black uppercase tracking-wider transition-all hover:bg-white hover:border-white disabled:cursor-not-allowed disabled:opacity-60",
+    large ? "px-8 py-3.5 text-sm" : "w-full justify-center px-6 py-3 text-xs"
+  );
+  const label = isJoining ? "Joining..." : "Register as Competitor";
+
+  if (isAuthenticated && onJoin) {
+    return (
+      <button type="button" onClick={onJoin} disabled={isJoining} className={className}>
+        {label}
+        <ArrowRight className={cn("transition-transform group-hover:translate-x-0.5", large ? "h-4 w-4" : "h-3.5 w-3.5")} />
+      </button>
+    );
+  }
+
   return (
     <SignInButton mode="redirect" forceRedirectUrl={`/hackathon/${hackathonId}`}>
-      <button
-        className={cn(
-          "group inline-flex items-center gap-2 border border-[#00FF41] bg-[#00FF41] font-bold text-black uppercase tracking-wider transition-all hover:bg-white hover:border-white",
-          large ? "px-8 py-3.5 text-sm" : "w-full justify-center px-6 py-3 text-xs"
-        )}
-      >
-        Register as Competitor
+      <button className={className}>
+        {label}
         <ArrowRight className={cn("transition-transform group-hover:translate-x-0.5", large ? "h-4 w-4" : "h-3.5 w-3.5")} />
       </button>
     </SignInButton>
@@ -136,6 +161,9 @@ export function PublicHackathonLanding({
   categories,
   sponsors,
   publicJudges,
+  isAuthenticated,
+  isJoining,
+  onJoin,
 }: PublicHackathonLandingProps) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -179,7 +207,7 @@ export function PublicHackathonLanding({
               </p>
               {isOpen && (
                 <div className="mt-6">
-                  <RegisterButton hackathonId={hackathonId} large />
+                  <RegisterButton hackathonId={hackathonId} isAuthenticated={isAuthenticated} isJoining={isJoining} onJoin={onJoin} large />
                 </div>
               )}
             </motion.div>
@@ -213,9 +241,9 @@ export function PublicHackathonLanding({
             </p>
             {isOpen && (
               <div className="mt-8 flex flex-col items-start gap-2">
-                <RegisterButton hackathonId={hackathonId} large />
+                <RegisterButton hackathonId={hackathonId} isAuthenticated={isAuthenticated} isJoining={isJoining} onJoin={onJoin} large />
                 <p className="text-[11px] text-[#333333] uppercase tracking-wider">
-                  No invite code · just sign in
+                  {isAuthenticated ? "No invite code · join instantly" : "No invite code · just sign in"}
                 </p>
               </div>
             )}
@@ -535,7 +563,7 @@ export function PublicHackathonLanding({
 
               {isOpen ? (
                 <>
-                  <RegisterButton hackathonId={hackathonId} />
+                  <RegisterButton hackathonId={hackathonId} isAuthenticated={isAuthenticated} isJoining={isJoining} onJoin={onJoin} />
                   <p className="mt-2.5 text-center text-[10px] text-[#333333] uppercase tracking-wider">
                     Public · No invite code
                   </p>
@@ -612,7 +640,7 @@ export function PublicHackathonLanding({
       {/* ── Bottom CTA bar (mobile-first, for when sidebar is off-screen) ── */}
       {isOpen && (
         <div className="sticky bottom-0 z-40 border-t border-[#1F1F1F] bg-black/95 px-4 py-3 backdrop-blur-sm lg:hidden">
-          <RegisterButton hackathonId={hackathonId} />
+          <RegisterButton hackathonId={hackathonId} isAuthenticated={isAuthenticated} isJoining={isJoining} onJoin={onJoin} />
         </div>
       )}
 
