@@ -180,7 +180,7 @@ export default function HacktoberPage() {
         </div>
       </section>
 
-      <section className="px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+      <section className="px-4 pb-10 pt-20 sm:px-6 lg:px-8 lg:pb-14 lg:pt-28">
         <div className="mx-auto max-w-4xl border border-[#1F1F1F] bg-[#0A0A0A] px-6 py-12 text-center sm:px-12 sm:py-16">
           <p className="mb-5 text-xs uppercase tracking-[0.2em] text-[#FF6600]">Oct 1—30, 2026</p>
           <h2 className="text-3xl font-bold uppercase sm:text-5xl">Make something worth opening up.</h2>
@@ -198,7 +198,7 @@ export default function HacktoberPage() {
         </div>
       </section>
 
-      <section className="border-b border-[#1F1F1F] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+      <section className="border-b border-[#1F1F1F] px-4 pb-16 pt-8 sm:px-6 lg:px-8 lg:pb-20 lg:pt-10">
         <div className="mx-auto grid max-w-6xl gap-8 border border-[#1F1F1F] bg-[#0A0A0A] p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center lg:p-12">
           <div>
             <p className="mb-4 text-xs uppercase tracking-[0.2em] text-[#FF6600]">03 / Sponsors</p>
