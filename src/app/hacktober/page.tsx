@@ -110,7 +110,7 @@ export default function HacktoberPage() {
             href="#brief"
             className="flex items-center justify-center gap-2 border-x border-t border-[#1F1F1F] py-4 text-[10px] uppercase tracking-[0.2em] text-[#555555] transition-colors hover:text-white"
           >
-            Read the brief <ArrowDown className="h-3 w-3" />
+            Read the overview <ArrowDown className="h-3 w-3" />
           </a>
         </div>
       </section>
@@ -118,7 +118,7 @@ export default function HacktoberPage() {
       <section id="brief" className="border-b border-[#1F1F1F] px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
         <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.65fr_1.35fr] lg:gap-20">
           <div>
-            <p className="mb-4 text-xs uppercase tracking-[0.2em] text-[#FF6600]">01 / The brief</p>
+            <p className="mb-4 text-xs uppercase tracking-[0.2em] text-[#FF6600]">01 / Overview</p>
             <h2 className="text-3xl font-bold uppercase leading-tight sm:text-4xl">
               Follow what interests you.
             </h2>
