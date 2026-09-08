@@ -180,6 +180,24 @@ export default function HacktoberPage() {
         </div>
       </section>
 
+      <section className="px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+        <div className="mx-auto max-w-4xl border border-[#1F1F1F] bg-[#0A0A0A] px-6 py-12 text-center sm:px-12 sm:py-16">
+          <p className="mb-5 text-xs uppercase tracking-[0.2em] text-[#FF6600]">Oct 1—30, 2026</p>
+          <h2 className="text-3xl font-bold uppercase sm:text-5xl">Make something worth opening up.</h2>
+          <p className="mx-auto mt-5 max-w-xl text-sm leading-6 text-[#777777]">
+            Keep that idea. Registration and full event details are on the way.
+          </p>
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            className="mt-8 cursor-not-allowed border border-[#555555] bg-[#111111] px-7 py-3.5 text-sm font-bold uppercase tracking-wider text-[#777777] opacity-70"
+          >
+            [ Register · Coming soon ]
+          </button>
+        </div>
+      </section>
+
       <section className="border-b border-[#1F1F1F] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
         <div className="mx-auto grid max-w-6xl gap-8 border border-[#1F1F1F] bg-[#0A0A0A] p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center lg:p-12">
           <div>
@@ -197,24 +215,6 @@ export default function HacktoberPage() {
             <Mail className="h-4 w-4" />
             [ Get in touch ]
           </a>
-        </div>
-      </section>
-
-      <section className="px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-        <div className="mx-auto max-w-4xl border border-[#1F1F1F] bg-[#0A0A0A] px-6 py-12 text-center sm:px-12 sm:py-16">
-          <p className="mb-5 text-xs uppercase tracking-[0.2em] text-[#FF6600]">Oct 1—30, 2026</p>
-          <h2 className="text-3xl font-bold uppercase sm:text-5xl">Make something worth opening up.</h2>
-          <p className="mx-auto mt-5 max-w-xl text-sm leading-6 text-[#777777]">
-            Keep that idea. Registration and full event details are on the way.
-          </p>
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            className="mt-8 cursor-not-allowed border border-[#555555] bg-[#111111] px-7 py-3.5 text-sm font-bold uppercase tracking-wider text-[#777777] opacity-70"
-          >
-            [ Register · Coming soon ]
-          </button>
         </div>
       </section>
 
