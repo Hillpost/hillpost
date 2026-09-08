@@ -5,6 +5,7 @@ import {
   Clock3,
   Code2,
   Laptop,
+  Mail,
   MapPin,
   Sparkles,
 } from "lucide-react";
@@ -176,6 +177,26 @@ export default function HacktoberPage() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      <section className="border-b border-[#1F1F1F] px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+        <div className="mx-auto grid max-w-6xl gap-8 border border-[#1F1F1F] bg-[#0A0A0A] p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center lg:p-12">
+          <div>
+            <p className="mb-4 text-xs uppercase tracking-[0.2em] text-[#FF6600]">03 / Sponsors</p>
+            <h2 className="text-2xl font-bold uppercase sm:text-3xl">Want to sponsor Hacktober?</h2>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-[#777777]">
+              Help us give open-source builders a place to share their work and
+              bring the community together in San Francisco.
+            </p>
+          </div>
+          <a
+            href="mailto:hacktober@hillpost.dev?subject=Hacktober%20sponsorship"
+            className="flex w-fit items-center gap-3 border border-[#FF6600] px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-[#FF6600] transition-colors hover:bg-[#FF6600] hover:text-black"
+          >
+            <Mail className="h-4 w-4" />
+            [ Get in touch ]
+          </a>
         </div>
       </section>
 
