@@ -201,7 +201,6 @@ export default function HacktoberPage() {
       <section className="border-b border-[#1F1F1F] px-4 pb-16 pt-8 sm:px-6 lg:px-8 lg:pb-20 lg:pt-10">
         <div className="mx-auto grid max-w-6xl gap-8 border border-[#1F1F1F] bg-[#0A0A0A] p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center lg:p-12">
           <div>
-            <p className="mb-4 text-xs uppercase tracking-[0.2em] text-[#FF6600]">03 / Sponsors</p>
             <h2 className="text-2xl font-bold uppercase sm:text-3xl">Want to sponsor Hacktober?</h2>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-[#777777]">
               Help us give open-source builders a place to share their work and
