@@ -2,6 +2,7 @@ name: CLI
 
 on:
   push:
+    branches: [main, feat/dx]
     paths:
       - 'cli/**'
       - '.github/workflows/cli.yml'
