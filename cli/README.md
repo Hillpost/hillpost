@@ -109,6 +109,35 @@ hillpost host members role <memberId> judge
 hillpost host members remove <memberId>
 ```
 
+## Judging
+
+```sh
+hillpost judge                  # scoring screen for the current hackathon
+hillpost judge list             # the same submissions as a table
+hillpost judge scores <id>      # your scores, and the averages when visible
+hillpost judge score <id> --category Creativity --score 8 --feedback "..."
+```
+
+`hillpost judge` opens a two-pane screen: submissions on the left, marked `[x]`
+once you have scored the current iteration, and the selected project on the
+right. `enter` opens the scoring form, one field per category plus feedback,
+pre-filled with the scores you already gave; `s` sends them one at a time.
+
+| key | in the list | in the scoring form |
+| --- | --- | --- |
+| `j` `k` or arrows | move | move between fields (`tab` too) |
+| `enter` | open the scoring form | next field, or submit from feedback |
+| `s` | - | submit every filled category |
+| `o` | open the project URL | open the project URL |
+| `esc` | quit | back to the list |
+| `q` | quit | quit |
+
+`s`, `o` and `q` are letters in the feedback field, where they type instead.
+
+`judge score` scores one category per call. `--category` takes a category id or
+its name ignoring case, and the score has to be between 1 and the category's
+maximum. Re-running it replaces your earlier score for that category.
+
 ## Conventions
 
 - `--json` prints the raw Convex value and nothing else, for scripts and agents.

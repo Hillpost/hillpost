@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/mattn/go-isatty"
@@ -45,4 +48,25 @@ func Date[T ~int64](ms T) string {
 		return "-"
 	}
 	return time.UnixMilli(int64(ms)).Local().Format("2006-01-02")
+}
+
+// Number formats a Convex number without a trailing ".0".
+func Number(f float64) string { return strconv.FormatFloat(f, 'f', -1, 64) }
+
+// OpenURL makes a best effort to open url in the user's browser. Failures are
+// silent: the caller always shows the link too.
+func OpenURL(url string) {
+	if url == "" {
+		return
+	}
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	_ = cmd.Start()
 }

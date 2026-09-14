@@ -126,6 +126,7 @@ type Submission struct {
 	ProjectURL      string           `json:"projectUrl"`
 	DemoURL         string           `json:"demoUrl"`
 	DeployedURL     string           `json:"deployedUrl"`
+	WhatsNew        string           `json:"whatsNew"`
 	Changelog       []ChangelogEntry `json:"changelog"`
 	SubmittedAt     Num              `json:"submittedAt"`
 	SubmittedBy     string           `json:"submittedBy"`

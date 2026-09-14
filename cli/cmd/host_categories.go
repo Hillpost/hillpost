@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/spf13/cobra"
 
@@ -54,7 +53,7 @@ var categoriesListCmd = &cobra.Command{
 		}
 		rows := make([][]string, 0, len(categories))
 		for _, cat := range categories {
-			rows = append(rows, []string{cat.Name, strconv.Itoa(cat.MaxScore.Int()), cat.Description, cat.ID})
+			rows = append(rows, []string{cat.Name, ui.Number(cat.MaxScore), cat.Description, cat.ID})
 		}
 		fmt.Print(ui.Table([]string{"NAME", "MAX", "DESCRIPTION", "ID"}, rows))
 		return nil
