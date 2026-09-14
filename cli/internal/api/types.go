@@ -11,16 +11,16 @@ type Hackathon struct {
 	Name                       string  `json:"name"`
 	Description                string  `json:"description"`
 	OrganizerID                string  `json:"organizerId"`
-	StartDate                  int64   `json:"startDate"`
-	SubmissionsStartDate       *int64  `json:"submissionsStartDate"`
-	SubmissionsEndDate         *int64  `json:"submissionsEndDate"`
-	EndDate                    int64   `json:"endDate"`
-	SubmissionFrequencyMinutes int64   `json:"submissionFrequencyMinutes"`
+	StartDate                  Number  `json:"startDate"`
+	SubmissionsStartDate       *Number `json:"submissionsStartDate"`
+	SubmissionsEndDate         *Number `json:"submissionsEndDate"`
+	EndDate                    Number  `json:"endDate"`
+	SubmissionFrequencyMinutes Number  `json:"submissionFrequencyMinutes"`
 	IsActive                   bool    `json:"isActive"`
 	IsPublic                   bool    `json:"isPublic"`
 	CompetitorJoinCode         string  `json:"competitorJoinCode"`
 	JudgeJoinCode              string  `json:"judgeJoinCode"`
-	CreatedAt                  int64   `json:"createdAt"`
+	CreatedAt                  Number  `json:"createdAt"`
 	MyRole                     string  `json:"myRole"`
 	Role                       string  `json:"role"`
 }
@@ -46,8 +46,8 @@ type DeviceLogin struct {
 	DeviceCode      string `json:"deviceCode"`
 	UserCode        string `json:"userCode"`
 	VerificationURL string `json:"verificationUrl"`
-	ExpiresAt       int64  `json:"expiresAt"`
-	Interval        int    `json:"interval"`
+	ExpiresAt       Number `json:"expiresAt"`
+	Interval        Number `json:"interval"`
 }
 
 // DeviceClaim is the return value of cli:claimDevice. Status is "pending",
