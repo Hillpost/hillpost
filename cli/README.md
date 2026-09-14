@@ -3,6 +3,15 @@
 Join, run and judge Hillpost hackathons from the terminal. The CLI talks to the
 Convex backend directly; it needs no Node tooling.
 
+## Install
+
+```sh
+curl -fsSL https://hillpost.dev/install.sh | sh
+```
+
+macOS and Linux. On Windows, download the zip from the
+[releases](https://github.com/Hillpost/hillpost/releases) page.
+
 ## Build from source
 
 Go 1.25 or newer.

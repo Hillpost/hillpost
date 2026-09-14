@@ -14,7 +14,9 @@ import (
 	"github.com/Hillpost/hillpost/cli/internal/ui"
 )
 
-const version = "0.1.0"
+// Version is what "hillpost --version" prints. main sets it from the value
+// the release build injects with -ldflags.
+var Version = "dev"
 
 var (
 	jsonOut       bool
@@ -24,7 +26,6 @@ var (
 var rootCmd = &cobra.Command{
 	Use:           "hillpost",
 	Short:         "Join, run and judge hackathons from the terminal",
-	Version:       version,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 }
@@ -40,6 +41,7 @@ var errNotLoggedIn = errors.New("Not logged in. Run: hillpost login")
 // Execute runs the CLI. Convex error messages are shown verbatim and every
 // failure exits 1.
 func Execute() {
+	rootCmd.Version = Version
 	if err := rootCmd.Execute(); err != nil {
 		var convexErr *api.Error
 		switch {

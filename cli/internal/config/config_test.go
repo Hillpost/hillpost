@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -46,7 +47,9 @@ func TestSaveThenLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Path: %v", err)
 	}
-	if filepath.Dir(filepath.Dir(path)) != dir {
+	// macOS puts the config under $HOME/Library/Application Support, so only
+	// check that the path stayed inside the temporary dir.
+	if rel, err := filepath.Rel(dir, path); err != nil || strings.HasPrefix(rel, "..") {
 		t.Errorf("config path %q is outside the temporary dir %q", path, dir)
 	}
 	if runtime.GOOS != "windows" {
