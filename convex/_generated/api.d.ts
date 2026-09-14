@@ -10,8 +10,10 @@
 
 import type * as auth from "../auth.js";
 import type * as categories from "../categories.js";
+import type * as cli from "../cli.js";
 import type * as hackathons from "../hackathons.js";
 import type * as leaderboard from "../leaderboard.js";
+import type * as lib_functions from "../lib/functions.js";
 import type * as members from "../members.js";
 import type * as migrations from "../migrations.js";
 import type * as scores from "../scores.js";
@@ -29,8 +31,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   categories: typeof categories;
+  cli: typeof cli;
   hackathons: typeof hackathons;
   leaderboard: typeof leaderboard;
+  "lib/functions": typeof lib_functions;
   members: typeof members;
   migrations: typeof migrations;
   scores: typeof scores;

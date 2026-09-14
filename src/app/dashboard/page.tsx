@@ -27,7 +27,7 @@ const roleBadgeClass = (role: string) => {
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isLoaded } = useUser();
-  const hackathons = useQuery(api.hackathons.listMine);
+  const hackathons = useQuery(api.hackathons.listMine, {});
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
