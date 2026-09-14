@@ -14,7 +14,7 @@ function getEventStatus(startDate: number, now: number) {
 }
 
 export default function DiscoverPage() {
-  const publicHackathons = useQuery(api.hackathons.listPublic);
+  const publicHackathons = useQuery(api.hackathons.listPublic, {});
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {

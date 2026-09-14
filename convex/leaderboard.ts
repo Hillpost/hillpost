@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { query } from "./lib/functions";
 import { getAuthUserId } from "./auth";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
