@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { format } from "date-fns";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
@@ -71,7 +71,10 @@ function NewToken({ token, onDismiss }: { token: string; onDismiss: () => void }
 }
 
 export function CliPanel() {
-  const tokens = useQuery(api.cli.listTokens, {});
+  // listTokens throws without a credential, so wait for Convex to hold the
+  // Clerk token rather than rendering an error on first paint.
+  const { isAuthenticated } = useConvexAuth();
+  const tokens = useQuery(api.cli.listTokens, isAuthenticated ? {} : "skip");
   const createToken = useMutation(api.cli.createToken);
   const revokeToken = useMutation(api.cli.revokeToken);
 
