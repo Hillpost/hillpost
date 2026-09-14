@@ -112,6 +112,8 @@ Conventions every command follows:
 
 ## 3. Issues and phases
 
+GitHub issues on Hillpost/hillpost: 1=#52, 2=#53, 3=#54, 4=#55, 5=#56, 6=#57, 7=#58, 8=#59, 9=#60.
+
 Phase 1 (parallel):
 1. Backend: CLI token auth, device flow, `convex/cli.ts` (section 2.1, 2.2).
 2. CLI core: scaffold, client, config, `login/logout/whoami/hackathons/discover/use/join` (section 2.4), unit tests against `httptest`.
