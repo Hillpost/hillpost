@@ -85,7 +85,7 @@ func (c *Client) call(ctx context.Context, endpoint, path string, args map[strin
 
 	switch payload.Status {
 	case "error":
-		return &Error{Message: strings.TrimSpace(payload.ErrorMessage)}
+		return &Error{Message: cleanErrorMessage(payload.ErrorMessage)}
 	case "success":
 	default:
 		return fmt.Errorf("unexpected response from %s (HTTP %d)", url, resp.StatusCode)

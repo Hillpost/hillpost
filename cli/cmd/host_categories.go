@@ -32,12 +32,13 @@ var categoriesListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		id, err := hostHackathonID(cfg)
+		ctx := cmd.Context()
+		id, err := resolveHackathon(ctx, c, cfg)
 		if err != nil {
 			return err
 		}
 		var raw json.RawMessage
-		if err := c.Query(cmd.Context(), "categories:list", map[string]any{"hackathonId": id}, &raw); err != nil {
+		if err := c.Query(ctx, "categories:list", map[string]any{"hackathonId": id}, &raw); err != nil {
 			return err
 		}
 		if jsonOut {
@@ -53,7 +54,7 @@ var categoriesListCmd = &cobra.Command{
 		}
 		rows := make([][]string, 0, len(categories))
 		for _, cat := range categories {
-			rows = append(rows, []string{cat.Name, strconv.FormatInt(int64(cat.MaxScore), 10), cat.Description, cat.ID})
+			rows = append(rows, []string{cat.Name, strconv.Itoa(cat.MaxScore.Int()), cat.Description, cat.ID})
 		}
 		fmt.Print(ui.Table([]string{"NAME", "MAX", "DESCRIPTION", "ID"}, rows))
 		return nil
@@ -69,7 +70,8 @@ var categoriesAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		id, err := hostHackathonID(cfg)
+		ctx := cmd.Context()
+		id, err := resolveHackathon(ctx, c, cfg)
 		if err != nil {
 			return err
 		}
@@ -77,7 +79,7 @@ var categoriesAddCmd = &cobra.Command{
 			return errors.New("--max must be a positive score")
 		}
 		var raw json.RawMessage
-		err = c.Mutate(cmd.Context(), "categories:create", map[string]any{
+		err = c.Mutate(ctx, "categories:create", map[string]any{
 			"hackathonId": id,
 			"name":        args[0],
 			"description": categoryFlags.description,

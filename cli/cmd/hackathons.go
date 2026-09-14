@@ -87,7 +87,7 @@ var discoverCmd = &cobra.Command{
 		}
 		rows := make([][]string, 0, len(hackathons))
 		for _, h := range hackathons {
-			rows = append(rows, []string{h.Name, ui.Date(int64(h.StartDate)), ui.Date(int64(h.EndDate)), h.ID})
+			rows = append(rows, []string{h.Name, ui.Date(h.StartDate), ui.Date(h.EndDate), h.ID})
 		}
 		fmt.Print(ui.Table([]string{"NAME", "STARTS", "ENDS", "ID"}, rows))
 		fmt.Println("\n" + ui.Label.Render("Join one with: hillpost join --public <id>"))

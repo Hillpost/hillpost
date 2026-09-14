@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/mattn/go-isatty"
 )
 
 // PrintJSON writes a Convex value to stdout with no styling, indented but valid
@@ -24,13 +26,11 @@ func PrintJSON(raw json.RawMessage) error {
 }
 
 // IsTTY reports whether stdin is a terminal. Nothing interactive may run when
-// it is not.
+// it is not. A file mode check is not enough: the null device is a character
+// device too, so `hillpost submit < /dev/null` would otherwise open a form.
 func IsTTY() bool {
-	info, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-	return info.Mode()&os.ModeCharDevice != 0
+	fd := os.Stdin.Fd()
+	return isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd)
 }
 
 // Field prints an aligned "label  value" line.
@@ -38,10 +38,11 @@ func Field(label, value string) {
 	fmt.Println(Label.Render(label) + "  " + Value.Render(value))
 }
 
-// Date formats a Convex timestamp (milliseconds since the epoch) as a date.
-func Date(ms int64) string {
+// Date formats a Convex timestamp (milliseconds since the epoch) as a date. It
+// is generic so it takes both a plain int64 and an api.Num.
+func Date[T ~int64](ms T) string {
 	if ms == 0 {
 		return "-"
 	}
-	return time.UnixMilli(ms).Local().Format("2006-01-02")
+	return time.UnixMilli(int64(ms)).Local().Format("2006-01-02")
 }

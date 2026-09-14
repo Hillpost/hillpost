@@ -30,11 +30,11 @@ var membersListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		id, err := hostHackathonID(cfg)
+		ctx := cmd.Context()
+		id, err := resolveHackathon(ctx, c, cfg)
 		if err != nil {
 			return err
 		}
-		ctx := cmd.Context()
 
 		// Decode twice: once to filter, once to keep the backend's own JSON for --json.
 		var raws []json.RawMessage
@@ -84,7 +84,7 @@ var membersListCmd = &cobra.Command{
 
 		rows := make([][]string, 0, len(members))
 		for _, m := range members {
-			rows = append(rows, []string{m.UserName, m.Role, m.Status, teamNames[m.TeamID], ui.Date(int64(m.JoinedAt)), m.ID})
+			rows = append(rows, []string{m.UserName, m.Role, m.Status, teamNames[m.TeamID], ui.Date(m.JoinedAt), m.ID})
 		}
 		fmt.Print(ui.Table([]string{"NAME", "ROLE", "STATUS", "TEAM", "JOINED", "ID"}, rows))
 		return nil

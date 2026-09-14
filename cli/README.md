@@ -47,6 +47,26 @@ hillpost use                    # pick the current hackathon interactively
 hillpost use <id|code>          # or set it directly
 ```
 
+## Compete
+
+```sh
+hillpost team create "Otters"   # create a team and join it
+hillpost team join <teamId>     # join a team, or run with no id to pick one
+hillpost team list              # every team in the current hackathon
+hillpost team show              # your team and its members
+hillpost team leave             # leave your team
+
+hillpost submit                 # form, pre-filled from your last submission
+hillpost submit --name Riverbed --description "..." --url https://github.com/...
+                                # plus optional --demo, --deployed, --whats-new
+
+hillpost submissions            # every submission, newest first
+hillpost submissions show <id>  # one submission, its changelog and judge feedback
+
+hillpost leaderboard            # ranked teams
+hillpost leaderboard --watch    # same, redrawn every five seconds, q to quit
+```
+
 ## Host a hackathon
 
 ```sh
@@ -63,12 +83,12 @@ are read in your local time. A new hackathon becomes the current one.
 hillpost host show                # dates, settings and counts
 hillpost host codes               # join codes and their hillpost.dev links
 hillpost host settings --frequency 15 --public=false --scores-visible judges
-hillpost host submissions         # every submission, newest first
 ```
 
 `settings` changes only the flags you pass: `--name`, `--description`,
 `--start`, `--end`, `--frequency`, `--public`, `--active`, `--feedback-visible`
-and `--scores-visible all|judges|none`.
+and `--scores-visible all|judges|none`. For the submissions themselves, use
+`hillpost submissions`.
 
 Judging categories:
 

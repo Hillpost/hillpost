@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Hillpost/hillpost/cli/internal/api"
-	"github.com/Hillpost/hillpost/cli/internal/config"
 	"github.com/Hillpost/hillpost/cli/internal/ui"
 )
 
@@ -53,7 +52,7 @@ var hostCreateCmd = &cobra.Command{
 		ctx := cmd.Context()
 
 		if createFlags.name == "" {
-			if !ui.IsTTY() {
+			if jsonOut || !ui.IsTTY() {
 				return errors.New("hillpost host create needs at least --name, --start and --end")
 			}
 			if err := askCreate(); err != nil {
@@ -96,7 +95,7 @@ var hostCreateCmd = &cobra.Command{
 			return ui.PrintJSON(raw)
 		}
 		fmt.Println(ui.Success.Render("Created " + h.Name))
-		ui.Field("id       ", h.ID)
+		ui.Field("id        ", h.ID)
 		printCodes(h)
 		fmt.Println("\n" + ui.Label.Render("It is now your current hackathon."))
 		return nil
@@ -112,11 +111,11 @@ var hostShowCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		id, err := hostHackathonID(cfg)
+		ctx := cmd.Context()
+		id, err := resolveHackathon(ctx, c, cfg)
 		if err != nil {
 			return err
 		}
-		ctx := cmd.Context()
 
 		var raw json.RawMessage
 		if err := c.Query(ctx, "hackathons:get", map[string]any{"hackathonId": id}, &raw); err != nil {
@@ -152,10 +151,10 @@ var hostShowCmd = &cobra.Command{
 		}
 		fmt.Println()
 		ui.Field("id         ", h.ID)
-		ui.Field("runs       ", ui.Date(int64(h.StartDate))+" to "+ui.Date(int64(h.EndDate)))
+		ui.Field("runs       ", ui.Date(h.StartDate)+" to "+ui.Date(h.EndDate))
 		ui.Field("submissions", ui.Date(optional(h.SubmissionsStartDate, h.StartDate))+" to "+
 			ui.Date(optional(h.SubmissionsEndDate, h.EndDate)))
-		ui.Field("every      ", strconv.FormatInt(int64(h.SubmissionFrequencyMinutes), 10)+" minutes")
+		ui.Field("every      ", strconv.Itoa(h.SubmissionFrequencyMinutes.Int())+" minutes")
 		ui.Field("active     ", activeLabel(h.IsActive))
 		ui.Field("public     ", activeLabel(h.IsPublic))
 		ui.Field("members    ", strconv.Itoa(len(members)))
@@ -174,16 +173,13 @@ var hostCodesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		id, err := hostHackathonID(cfg)
+		ctx := cmd.Context()
+		id, err := resolveHackathon(ctx, c, cfg)
 		if err != nil {
 			return err
 		}
-		var raw json.RawMessage
-		if err := c.Query(cmd.Context(), "hackathons:get", map[string]any{"hackathonId": id}, &raw); err != nil {
-			return err
-		}
 		var h *api.Hackathon
-		if err := json.Unmarshal(raw, &h); err != nil {
+		if err := c.Query(ctx, "hackathons:get", map[string]any{"hackathonId": id}, &h); err != nil {
 			return err
 		}
 		if h == nil {
@@ -202,7 +198,7 @@ var hostCodesCmd = &cobra.Command{
 			return ui.PrintJSON(codes)
 		}
 		if h.JudgeJoinCode == "" {
-			return errors.New("Only organizers can see join codes")
+			return errors.New("Only organizers can see the judge join code")
 		}
 		fmt.Println(ui.Title.Render(h.Name))
 		fmt.Println()
@@ -233,7 +229,8 @@ var hostSettingsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		id, err := hostHackathonID(cfg)
+		ctx := cmd.Context()
+		id, err := resolveHackathon(ctx, c, cfg)
 		if err != nil {
 			return err
 		}
@@ -285,69 +282,13 @@ var hostSettingsCmd = &cobra.Command{
 		}
 
 		var raw json.RawMessage
-		if err := c.Mutate(cmd.Context(), "hackathons:update", args, &raw); err != nil {
+		if err := c.Mutate(ctx, "hackathons:update", args, &raw); err != nil {
 			return err
 		}
 		if jsonOut {
 			return ui.PrintJSON(raw)
 		}
 		fmt.Println(ui.Success.Render("Settings updated"))
-		return nil
-	},
-}
-
-var hostSubmissionsCmd = &cobra.Command{
-	Use:   "submissions",
-	Short: "List every submission in the current hackathon",
-	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		c, cfg, err := authedClient()
-		if err != nil {
-			return err
-		}
-		id, err := hostHackathonID(cfg)
-		if err != nil {
-			return err
-		}
-		ctx := cmd.Context()
-
-		var raw json.RawMessage
-		if err := c.Query(ctx, "submissions:list", map[string]any{"hackathonId": id}, &raw); err != nil {
-			return err
-		}
-		if jsonOut {
-			return ui.PrintJSON(raw)
-		}
-		var submissions []api.Submission
-		if err := json.Unmarshal(raw, &submissions); err != nil {
-			return err
-		}
-		if len(submissions) == 0 {
-			fmt.Println(ui.Label.Render("No submissions yet."))
-			return nil
-		}
-
-		var teams []api.Team
-		if err := c.Query(ctx, "teams:list", map[string]any{"hackathonId": id}, &teams); err != nil {
-			return err
-		}
-		teamNames := make(map[string]string, len(teams))
-		for _, t := range teams {
-			teamNames[t.ID] = t.Name
-		}
-
-		rows := make([][]string, 0, len(submissions))
-		for _, s := range submissions {
-			rows = append(rows, []string{
-				s.Name,
-				teamNames[s.TeamID],
-				ui.Date(int64(s.SubmittedAt)),
-				strconv.FormatInt(int64(s.SubmissionCount), 10),
-				strconv.Itoa(len(s.JudgedBy)),
-				s.ID,
-			})
-		}
-		fmt.Print(ui.Table([]string{"PROJECT", "TEAM", "SUBMITTED", "ITERATION", "SCORED BY", "ID"}, rows))
 		return nil
 	},
 }
@@ -375,18 +316,8 @@ func init() {
 	s.BoolVar(&settingsFlags.feedbackVisible, "feedback-visible", false, "let competitors read judge feedback")
 	s.StringVar(&settingsFlags.scoresVisible, "scores-visible", "", "who can see scores: all, judges or none")
 
-	hostCmd.AddCommand(hostCreateCmd, hostShowCmd, hostCodesCmd, hostSettingsCmd, hostSubmissionsCmd)
+	hostCmd.AddCommand(hostCreateCmd, hostShowCmd, hostCodesCmd, hostSettingsCmd)
 	rootCmd.AddCommand(hostCmd)
-}
-
-// hostHackathonID is the hackathon organizer commands act on: -H when given,
-// else the one set by `hillpost use`.
-func hostHackathonID(cfg config.Config) (string, error) {
-	id := currentHackathonID(cfg)
-	if id == "" {
-		return "", errors.New("no current hackathon, pass -H <id> or run: hillpost use")
-	}
-	return id, nil
 }
 
 // parseDate reads 2026-10-03, 2026-10-03T09:00 or a full RFC3339 timestamp and
@@ -498,9 +429,9 @@ func joinLink(code string) string {
 	return joinURL + code
 }
 
-func optional(value *api.Number, fallback api.Number) int64 {
+func optional(value *api.Num, fallback api.Num) api.Num {
 	if value == nil {
-		return int64(fallback)
+		return fallback
 	}
-	return int64(*value)
+	return *value
 }
