@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os/exec"
-	"runtime"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -118,7 +116,7 @@ func loginWithDevice(ctx context.Context, c *api.Client, cfg config.Config) erro
 	ui.Field("code", ui.Code.Render(device.UserCode))
 	ui.Field("open", device.VerificationURL)
 	fmt.Println()
-	openBrowser(device.VerificationURL)
+	ui.OpenURL(device.VerificationURL)
 
 	interval := time.Duration(device.Interval) * time.Second
 	if interval <= 0 {
@@ -167,19 +165,4 @@ func reportLogin(userName string) error {
 	}
 	fmt.Println(ui.Success.Render("Logged in as " + userName))
 	return nil
-}
-
-// openBrowser makes a best effort to open url; failures are the user's cue to
-// open the printed link themselves.
-func openBrowser(url string) {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	case "darwin":
-		cmd = exec.Command("open", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
-	_ = cmd.Start()
 }
