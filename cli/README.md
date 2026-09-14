@@ -67,6 +67,48 @@ hillpost leaderboard            # ranked teams
 hillpost leaderboard --watch    # same, redrawn every five seconds, q to quit
 ```
 
+## Host a hackathon
+
+```sh
+hillpost host create --name "Autumn Jam" \
+  --start 2026-10-03T09:00 --end 2026-10-05T17:00 \
+  --frequency 30 --public
+hillpost host create              # or fill in the form, in a terminal
+```
+
+Dates accept `2026-10-03`, `2026-10-03T09:00` and full RFC3339 timestamps, and
+are read in your local time. A new hackathon becomes the current one.
+
+```sh
+hillpost host show                # dates, settings and counts
+hillpost host codes               # join codes and their hillpost.dev links
+hillpost host settings --frequency 15 --public=false --scores-visible judges
+```
+
+`settings` changes only the flags you pass: `--name`, `--description`,
+`--start`, `--end`, `--frequency`, `--public`, `--active`, `--feedback-visible`
+and `--scores-visible all|judges|none`. For the submissions themselves, use
+`hillpost submissions`.
+
+Judging categories:
+
+```sh
+hillpost host categories list
+hillpost host categories add "Execution" --max 20 --description "Does it work"
+hillpost host categories edit <categoryId> --max 10
+hillpost host categories remove <categoryId>
+```
+
+People:
+
+```sh
+hillpost host members list --role judge --status pending
+hillpost host members approve <memberId>
+hillpost host members reject <memberId>
+hillpost host members role <memberId> judge
+hillpost host members remove <memberId>
+```
+
 ## Judging
 
 ```sh
