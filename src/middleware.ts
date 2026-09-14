@@ -17,9 +17,12 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
-  }
+  if (isPublicRoute(request)) return;
+  // Send the user back where they were headed, query string and all, instead of
+  // dropping them on the dashboard. /cli/login needs its ?code= to survive.
+  const signInUrl = new URL("/sign-in", request.url);
+  signInUrl.searchParams.set("redirect_url", request.url);
+  await auth.protect({ unauthenticatedUrl: signInUrl.toString() });
 });
 
 export const config = {
