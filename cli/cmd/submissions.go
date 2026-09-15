@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Hillpost/hillpost/cli/internal/api"
+	"github.com/Hillpost/hillpost/cli/internal/flow"
 	"github.com/Hillpost/hillpost/cli/internal/ui"
 )
 
@@ -113,37 +114,8 @@ func runSubmissionsList(cmd *cobra.Command, _ []string) error {
 	if err := c.Query(cmd.Context(), "teams:list", map[string]any{"hackathonId": hackathonID}, &teams); err != nil {
 		return err
 	}
-	fmt.Print(ui.Table([]string{"TEAM", "PROJECT", "N", "LAST", "ID"}, submissionRows(submissions, teamNames(teams))))
+	fmt.Print(ui.Table([]string{"TEAM", "PROJECT", "N", "LAST", "ID"}, flow.SubmissionRows(submissions, flow.TeamNames(teams))))
 	return nil
-}
-
-// teamNames maps team ids to names so submissions can be listed by team.
-func teamNames(teams []api.Team) map[string]string {
-	names := make(map[string]string, len(teams))
-	for _, t := range teams {
-		names[t.ID] = t.Name
-	}
-	return names
-}
-
-// submissionRows renders submissions as table rows. A team whose name is
-// unknown is shown by id, which is still enough to look it up.
-func submissionRows(submissions []api.Submission, names map[string]string) [][]string {
-	rows := make([][]string, 0, len(submissions))
-	for _, s := range submissions {
-		team := names[s.TeamID]
-		if team == "" {
-			team = s.TeamID
-		}
-		rows = append(rows, []string{
-			team,
-			s.Name,
-			strconv.Itoa(s.SubmissionCount.Int()),
-			ui.Date(s.SubmittedAt),
-			s.ID,
-		})
-	}
-	return rows
 }
 
 func printChangelog(entries []api.ChangelogEntry) {
@@ -190,7 +162,7 @@ func printFeedback(f *api.Feedback) {
 					continue
 				}
 				category := categories[cs.CategoryID]
-				line := fmt.Sprintf("%s  %s / %s", category.Name, formatScore(*cs.Score), formatScore(category.MaxScore))
+				line := fmt.Sprintf("%s  %s / %s", category.Name, flow.FormatScore(*cs.Score), flow.FormatScore(category.MaxScore))
 				if cs.Feedback != nil && strings.TrimSpace(*cs.Feedback) != "" {
 					line += "  " + ui.Label.Render(strings.TrimSpace(*cs.Feedback))
 				}

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -9,7 +8,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
-	"github.com/Hillpost/hillpost/cli/internal/api"
+	"github.com/Hillpost/hillpost/cli/internal/flow"
 	"github.com/Hillpost/hillpost/cli/internal/ui"
 )
 
@@ -41,57 +40,24 @@ var joinCmd = &cobra.Command{
 		}
 
 		ctx := cmd.Context()
-		path, argMap := "hackathons:join", map[string]any{"joinCode": arg}
+		joined, err := flow.Join(ctx, c, arg)
 		if joinPublicFlag {
-			path, argMap = "hackathons:joinPublic", map[string]any{"hackathonId": arg}
+			joined, err = flow.JoinPublic(ctx, c, arg)
 		}
-
-		// Look the hackathon up first: the join mutation returns only an id, and
-		// this is also what tells us whether the code is a judge code.
-		var found *api.Hackathon
-		lookupPath, lookupArgs := "hackathons:getByJoinCode", map[string]any{"joinCode": arg}
-		if joinPublicFlag {
-			lookupPath, lookupArgs = "hackathons:get", map[string]any{"hackathonId": arg}
-		}
-		if err := c.Query(ctx, lookupPath, lookupArgs, &found); err != nil {
+		if err != nil {
 			return err
 		}
-		if found == nil {
-			return fmt.Errorf("no hackathon found for %q", arg)
-		}
 
-		var raw json.RawMessage
-		if err := c.Mutate(ctx, path, argMap, &raw); err != nil {
-			return err
-		}
 		if jsonOut {
-			if err := ui.PrintJSON(raw); err != nil {
+			if err := ui.PrintJSON(joined.Raw); err != nil {
 				return err
 			}
+		} else {
+			fmt.Println(joinMessage(joined))
 		}
 
-		var result api.JoinResult
-		if err := json.Unmarshal(raw, &result); err != nil {
-			return err
-		}
-
-		role := found.Role
-		if role == "" {
-			role = "competitor"
-		}
-		if !jsonOut {
-			if result.AlreadyMember {
-				fmt.Println(ui.Warn.Render("Already a member of " + found.Name))
-			} else {
-				fmt.Println(ui.Success.Render("Joined " + found.Name + " as " + role))
-			}
-			if role == "judge" && !result.AlreadyMember {
-				fmt.Println(ui.Label.Render("An organizer has to approve judges before you can score."))
-			}
-		}
-
-		cfg.HackathonID = result.HackathonID
-		cfg.HackathonName = found.Name
+		cfg.HackathonID = joined.Hackathon.ID
+		cfg.HackathonName = joined.Hackathon.Name
 		return cfg.Save()
 	},
 }
@@ -117,4 +83,17 @@ func askJoinCode() (string, error) {
 		return "", errors.New("no join code given")
 	}
 	return code, nil
+}
+
+// joinMessage says what joining did, and warns judges that they wait for an
+// organizer before they can score.
+func joinMessage(joined flow.Joined) string {
+	if joined.AlreadyMember {
+		return ui.Warn.Render("Already a member of " + joined.Hackathon.Name)
+	}
+	line := ui.Success.Render("Joined " + joined.Hackathon.Name + " as " + joined.Role)
+	if joined.Role == "judge" {
+		line += "\n" + ui.Label.Render("An organizer has to approve judges before you can score.")
+	}
+	return line
 }

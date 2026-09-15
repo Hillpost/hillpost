@@ -7,34 +7,23 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
 	"github.com/Hillpost/hillpost/cli/internal/api"
+	"github.com/Hillpost/hillpost/cli/internal/flow"
 	"github.com/Hillpost/hillpost/cli/internal/ui"
 )
-
-// joinURL is where a join code sends someone in a browser.
-const joinURL = "https://hillpost.dev/join/"
 
 var hostCmd = &cobra.Command{
 	Use:   "host",
 	Short: "Run a hackathon: create it, share codes, manage members",
 }
 
-var createFlags struct {
-	name             string
-	description      string
-	start            string
-	end              string
-	submissionsStart string
-	submissionsEnd   string
-	frequency        int
-	public           bool
-	as               string
-}
+var (
+	createFlags flow.NewHackathon
+	createAs    string
+)
 
 var hostCreateCmd = &cobra.Command{
 	Use:   "create",
@@ -51,37 +40,21 @@ var hostCreateCmd = &cobra.Command{
 		}
 		ctx := cmd.Context()
 
-		if createFlags.name == "" {
+		if createFlags.Name == "" {
 			if jsonOut || !ui.IsTTY() {
 				return errors.New("hillpost host create needs at least --name, --start and --end")
 			}
-			if err := askCreate(); err != nil {
+			if err := flow.CreateForm(&createFlags).Run(); err != nil {
 				return err
 			}
 		}
 
-		args, err := createArgs()
-		if err != nil {
-			return err
-		}
 		name, err := organizerName(ctx, c)
 		if err != nil {
 			return err
 		}
-		args["userName"] = name
-
-		var id string
-		if err := c.Mutate(ctx, "hackathons:create", args, &id); err != nil {
-			return err
-		}
-
-		// create returns only the id; get returns the join codes for organizers.
-		var raw json.RawMessage
-		if err := c.Query(ctx, "hackathons:get", map[string]any{"hackathonId": id}, &raw); err != nil {
-			return err
-		}
-		var h api.Hackathon
-		if err := json.Unmarshal(raw, &h); err != nil {
+		h, raw, err := flow.Create(ctx, c, createFlags, name)
+		if err != nil {
 			return err
 		}
 
@@ -189,8 +162,8 @@ var hostCodesCmd = &cobra.Command{
 			codes, err := json.Marshal(map[string]any{
 				"competitorJoinCode": h.CompetitorJoinCode,
 				"judgeJoinCode":      h.JudgeJoinCode,
-				"competitorUrl":      joinLink(h.CompetitorJoinCode),
-				"judgeUrl":           joinLink(h.JudgeJoinCode),
+				"competitorUrl":      flow.JoinLink(h.CompetitorJoinCode),
+				"judgeUrl":           flow.JoinLink(h.JudgeJoinCode),
 			})
 			if err != nil {
 				return err
@@ -244,14 +217,14 @@ var hostSettingsCmd = &cobra.Command{
 			args["description"] = settingsFlags.description
 		}
 		if flags.Changed("start") {
-			ms, err := parseDate(settingsFlags.start)
+			ms, err := flow.ParseDate(settingsFlags.start)
 			if err != nil {
 				return err
 			}
 			args["startDate"] = ms
 		}
 		if flags.Changed("end") {
-			ms, err := parseDate(settingsFlags.end)
+			ms, err := flow.ParseDate(settingsFlags.end)
 			if err != nil {
 				return err
 			}
@@ -295,15 +268,15 @@ var hostSettingsCmd = &cobra.Command{
 
 func init() {
 	f := hostCreateCmd.Flags()
-	f.StringVar(&createFlags.name, "name", "", "hackathon name")
-	f.StringVar(&createFlags.description, "description", "", "one paragraph about the hackathon")
-	f.StringVar(&createFlags.start, "start", "", "when the hackathon starts, e.g. 2026-10-03T09:00")
-	f.StringVar(&createFlags.end, "end", "", "when the hackathon ends")
-	f.StringVar(&createFlags.submissionsStart, "submissions-start", "", "when submissions open (default: the start)")
-	f.StringVar(&createFlags.submissionsEnd, "submissions-end", "", "when submissions close (default: the end)")
-	f.IntVar(&createFlags.frequency, "frequency", 30, "minutes competitors must wait between submissions")
-	f.BoolVar(&createFlags.public, "public", false, "list it on the public discover page")
-	f.StringVar(&createFlags.as, "as", "", "your display name, when your account has none yet")
+	f.StringVar(&createFlags.Name, "name", "", "hackathon name")
+	f.StringVar(&createFlags.Description, "description", "", "one paragraph about the hackathon")
+	f.StringVar(&createFlags.Start, "start", "", "when the hackathon starts, e.g. 2026-10-03T09:00")
+	f.StringVar(&createFlags.End, "end", "", "when the hackathon ends")
+	f.StringVar(&createFlags.SubmissionsStart, "submissions-start", "", "when submissions open (default: the start)")
+	f.StringVar(&createFlags.SubmissionsEnd, "submissions-end", "", "when submissions close (default: the end)")
+	f.IntVar(&createFlags.Frequency, "frequency", 30, "minutes competitors must wait between submissions")
+	f.BoolVar(&createFlags.Public, "public", false, "list it on the public discover page")
+	f.StringVar(&createAs, "as", "", "your display name, when your account has none yet")
 
 	s := hostSettingsCmd.Flags()
 	s.StringVar(&settingsFlags.name, "name", "", "rename the hackathon")
@@ -320,113 +293,18 @@ func init() {
 	rootCmd.AddCommand(hostCmd)
 }
 
-// parseDate reads 2026-10-03, 2026-10-03T09:00 or a full RFC3339 timestamp and
-// returns milliseconds since the epoch. Values without a zone are local time.
-func parseDate(s string) (int64, error) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return 0, errors.New("no date given")
-	}
-	for _, layout := range []string{"2006-01-02", "2006-01-02T15:04", "2006-01-02T15:04:05"} {
-		if t, err := time.ParseInLocation(layout, s, time.Local); err == nil {
-			return t.UnixMilli(), nil
-		}
-	}
-	if t, err := time.Parse(time.RFC3339, s); err == nil {
-		return t.UnixMilli(), nil
-	}
-	return 0, fmt.Errorf("cannot read the date %q, use 2026-10-03, 2026-10-03T09:00 or an RFC3339 timestamp", s)
-}
-
-// createArgs turns the create flags into hackathons:create arguments.
-func createArgs() (map[string]any, error) {
-	if strings.TrimSpace(createFlags.name) == "" {
-		return nil, errors.New("hillpost host create needs --name")
-	}
-	if createFlags.start == "" || createFlags.end == "" {
-		return nil, errors.New("hillpost host create needs --start and --end")
-	}
-	start, err := parseDate(createFlags.start)
-	if err != nil {
-		return nil, err
-	}
-	end, err := parseDate(createFlags.end)
-	if err != nil {
-		return nil, err
-	}
-	args := map[string]any{
-		"name":                       strings.TrimSpace(createFlags.name),
-		"description":                createFlags.description,
-		"startDate":                  start,
-		"endDate":                    end,
-		"submissionFrequencyMinutes": createFlags.frequency,
-		"isPublic":                   createFlags.public,
-	}
-	if createFlags.submissionsStart != "" {
-		ms, err := parseDate(createFlags.submissionsStart)
-		if err != nil {
-			return nil, err
-		}
-		args["submissionsStartDate"] = ms
-	}
-	if createFlags.submissionsEnd != "" {
-		ms, err := parseDate(createFlags.submissionsEnd)
-		if err != nil {
-			return nil, err
-		}
-		args["submissionsEndDate"] = ms
-	}
-	return args, nil
-}
-
-// askCreate fills the create flags from a form. Only runs on a terminal.
-func askCreate() error {
-	frequency := strconv.Itoa(createFlags.frequency)
-	form := huh.NewForm(huh.NewGroup(
-		huh.NewInput().Title("Name").Value(&createFlags.name),
-		huh.NewInput().Title("Description").Value(&createFlags.description),
-		huh.NewInput().Title("Starts").Placeholder("2026-10-03T09:00").Value(&createFlags.start),
-		huh.NewInput().Title("Ends").Placeholder("2026-10-05T17:00").Value(&createFlags.end),
-		huh.NewInput().Title("Minutes between submissions").Value(&frequency),
-		huh.NewConfirm().Title("List it publicly?").Value(&createFlags.public),
-	))
-	if err := form.Run(); err != nil {
-		return err
-	}
-	minutes, err := strconv.Atoi(strings.TrimSpace(frequency))
-	if err != nil || minutes <= 0 {
-		return fmt.Errorf("minutes between submissions must be a positive number, got %q", frequency)
-	}
-	createFlags.frequency = minutes
-	return nil
-}
-
-// organizerName is the name to show on the organizer's membership. CLI tokens
-// carry no profile, so fall back to the name the account already uses.
+// organizerName is the name to show on the organizer's membership, overridden
+// by --as for an account that has no display name yet.
 func organizerName(ctx context.Context, c *api.Client) (string, error) {
-	if name := strings.TrimSpace(createFlags.as); name != "" {
+	if name := strings.TrimSpace(createAs); name != "" {
 		return name, nil
 	}
-	var me api.WhoAmI
-	if err := c.Query(ctx, "cli:whoami", nil, &me); err != nil {
-		return "", err
-	}
-	if strings.TrimSpace(me.UserName) == "" {
-		return "", errors.New("your account has no display name yet, pass --as \"Your Name\"")
-	}
-	return me.UserName, nil
+	return flow.OrganizerName(ctx, c)
 }
 
 func printCodes(h api.Hackathon) {
-	ui.Field("competitor", ui.Code.Render(h.CompetitorJoinCode)+"  "+joinLink(h.CompetitorJoinCode))
-	ui.Field("judge     ", ui.Code.Render(h.JudgeJoinCode)+"  "+joinLink(h.JudgeJoinCode))
-}
-
-func joinLink(code string) string {
-	if code == "" {
-		return ""
-	}
-	return joinURL + code
+	ui.Field("competitor", ui.Code.Render(h.CompetitorJoinCode)+"  "+flow.JoinLink(h.CompetitorJoinCode))
+	ui.Field("judge     ", ui.Code.Render(h.JudgeJoinCode)+"  "+flow.JoinLink(h.JudgeJoinCode))
 }
 
 func optional(value *api.Num, fallback api.Num) api.Num {

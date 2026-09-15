@@ -5,14 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
 	"github.com/Hillpost/hillpost/cli/internal/api"
+	"github.com/Hillpost/hillpost/cli/internal/flow"
 	"github.com/Hillpost/hillpost/cli/internal/tui"
 	"github.com/Hillpost/hillpost/cli/internal/ui"
 )
@@ -45,12 +44,12 @@ var judgeCmd = &cobra.Command{
 		var data tui.JudgeData
 		data.HackathonName = cfg.HackathonName
 		err = ui.Spin("Loading submissions", func() error {
-			var me api.WhoAmI
-			if err := c.Query(ctx, "cli:whoami", nil, &me); err != nil {
+			me, err := flow.WhoAmI(ctx, c)
+			if err != nil {
 				return err
 			}
 			data.JudgeID = me.UserID
-			data.Submissions, data.TeamNames, data.Categories, err = judgeContext(ctx, c, hackathonID)
+			data.JudgeContext, err = flow.LoadJudgeContext(ctx, c, hackathonID)
 			return err
 		})
 		if err != nil {
@@ -89,26 +88,26 @@ var judgeListCmd = &cobra.Command{
 			return ui.PrintJSON(raw)
 		}
 
-		var me api.WhoAmI
-		if err := c.Query(ctx, "cli:whoami", nil, &me); err != nil {
-			return err
-		}
-		submissions, teamNames, _, err := judgeContext(ctx, c, hackathonID)
+		me, err := flow.WhoAmI(ctx, c)
 		if err != nil {
 			return err
 		}
-		if len(submissions) == 0 {
+		judging, err := flow.LoadJudgeContext(ctx, c, hackathonID)
+		if err != nil {
+			return err
+		}
+		if len(judging.Submissions) == 0 {
 			fmt.Println(ui.Label.Render("No submissions yet."))
 			return nil
 		}
 
-		rows := make([][]string, 0, len(submissions))
-		for _, s := range submissions {
+		rows := make([][]string, 0, len(judging.Submissions))
+		for _, s := range judging.Submissions {
 			mark := " "
-			if scoredBy(s, me.UserID) {
+			if flow.ScoredBy(s, me.UserID) {
 				mark = ui.Success.Render("x")
 			}
-			team := teamNames[s.TeamID]
+			team := judging.TeamNames[s.TeamID]
 			if team == "" {
 				team = "unknown team"
 			}
@@ -264,32 +263,6 @@ func init() {
 	rootCmd.AddCommand(judgeCmd)
 }
 
-// judgeContext loads everything the submission list shows: the submissions
-// themselves, their team names and the hackathon's categories.
-func judgeContext(ctx context.Context, c *api.Client, hackathonID string) ([]api.Submission, map[string]string, []api.Category, error) {
-	var submissions []api.Submission
-	if err := c.Query(ctx, "submissions:list", map[string]any{"hackathonId": hackathonID}, &submissions); err != nil {
-		return nil, nil, nil, err
-	}
-	var teams []api.Team
-	if err := c.Query(ctx, "teams:list", map[string]any{"hackathonId": hackathonID}, &teams); err != nil {
-		return nil, nil, nil, err
-	}
-	var categories []api.Category
-	if err := c.Query(ctx, "categories:list", map[string]any{"hackathonId": hackathonID}, &categories); err != nil {
-		return nil, nil, nil, err
-	}
-
-	names := make(map[string]string, len(teams))
-	for _, t := range teams {
-		names[t.ID] = t.Name
-	}
-	sort.SliceStable(submissions, func(i, j int) bool {
-		return strings.ToLower(names[submissions[i].TeamID]) < strings.ToLower(names[submissions[j].TeamID])
-	})
-	return submissions, names, categories, nil
-}
-
 func getSubmission(ctx context.Context, c *api.Client, id string) (api.Submission, error) {
 	var submission *api.Submission
 	if err := c.Query(ctx, "submissions:get", map[string]any{"submissionId": id}, &submission); err != nil {
@@ -299,13 +272,4 @@ func getSubmission(ctx context.Context, c *api.Client, id string) (api.Submissio
 		return api.Submission{}, fmt.Errorf("no submission %q, or you cannot see it", id)
 	}
 	return *submission, nil
-}
-
-func scoredBy(s api.Submission, userID string) bool {
-	for _, id := range s.JudgedBy {
-		if id == userID {
-			return true
-		}
-	}
-	return false
 }
