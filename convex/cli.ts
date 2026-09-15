@@ -9,7 +9,9 @@ import { requireAuthUserId, getAuthUserName } from "./auth";
 
 const DEVICE_TTL_MS = 10 * 60 * 1000;
 const POLL_INTERVAL_SECONDS = 2;
-const VERIFICATION_URL = "https://hillpost.dev/cli/login";
+// SITE_URL is a Convex environment variable; set it on a dev deployment so the
+// CLI opens the local web app instead of production.
+const VERIFICATION_URL = `${process.env.SITE_URL ?? "https://hillpost.dev"}/cli/login`;
 // No 0/O/1/I: these codes get read aloud and typed by hand.
 const USER_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
