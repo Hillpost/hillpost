@@ -44,4 +44,5 @@ next-env.d.ts
 /.open-next
 
 # goreleaser
-/cli/dist
+cli/dist
+cli/hillpost
