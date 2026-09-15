@@ -11,8 +11,8 @@ curl -fsSL https://hillpost.dev/install.sh | sh
 
 macOS and Linux. On Windows, download the zip from the
 [releases](https://github.com/Hillpost/hillpost/releases) page. With Go 1.25 or
-newer, `go install github.com/Hillpost/hillpost/cli@latest`. From this
-directory, `go build -o hillpost .`.
+newer, `go install github.com/Hillpost/hillpost/cli/cmd/hillpost@latest`. From this
+directory, `go build -o hillpost ./cmd/hillpost`.
 
 ## Dashboard
 
@@ -44,6 +44,6 @@ HILLPOST_TOKEN=hp_... hillpost whoami --json
 `scripts/check-docs.sh` checks the command reference against the built binary:
 
 ```sh
-go build -o hillpost .
+go build -o hillpost ./cmd/hillpost
 sh scripts/check-docs.sh
 ```

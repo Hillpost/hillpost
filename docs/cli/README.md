@@ -19,7 +19,7 @@ checksum, and installs to `/usr/local/bin` when that is writable, else
 With Go 1.25 or newer:
 
 ```sh
-go install github.com/Hillpost/hillpost/cli@latest
+go install github.com/Hillpost/hillpost/cli/cmd/hillpost@latest
 ```
 
 On Windows, download the `.zip` for your architecture from the
@@ -30,7 +30,7 @@ From a clone:
 
 ```sh
 cd cli
-go build -o hillpost .      # hillpost.exe on Windows
+go build -o hillpost ./cmd/hillpost      # hillpost.exe on Windows
 ```
 
 Check it:

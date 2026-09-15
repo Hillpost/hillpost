@@ -10,7 +10,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 
 const INSTALL_COMMANDS = [
   "curl -fsSL https://hillpost.dev/install.sh | sh",
-  "go install github.com/Hillpost/hillpost/cli@latest",
+  "go install github.com/Hillpost/hillpost/cli/cmd/hillpost@latest",
 ];
 
 function CopyButton({ value, label }: { value: string; label: string }) {

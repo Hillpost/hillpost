@@ -17,7 +17,7 @@ if ! command -v "$bin" >/dev/null 2>&1 && [ ! -x "$bin" ]; then
 	if [ -x "$bin.exe" ]; then
 		bin="$bin.exe"
 	else
-		echo "check-docs: no hillpost binary at $bin (build it: cd cli && go build -o hillpost .)" >&2
+		echo "check-docs: no hillpost binary at $bin (build it: cd cli && go build -o hillpost ./cmd/hillpost)" >&2
 		exit 1
 	fi
 fi
