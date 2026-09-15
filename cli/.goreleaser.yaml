@@ -14,7 +14,7 @@ before:
     - go mod tidy
 
 builds:
-  - main: .
+  - main: ./cmd/hillpost
     binary: hillpost
     env:
       - CGO_ENABLED=0

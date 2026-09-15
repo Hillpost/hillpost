@@ -17,7 +17,7 @@ hillpost whoami --json        # verifies the token
 
 If `hillpost` is missing, install it with
 `curl -fsSL https://hillpost.dev/install.sh | sh` (macOS, Linux) or
-`go install github.com/Hillpost/hillpost/cli@latest`. On Windows take the zip
+`go install github.com/Hillpost/hillpost/cli/cmd/hillpost@latest`. On Windows take the zip
 from https://github.com/Hillpost/hillpost/releases.
 
 ## Auth
