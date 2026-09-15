@@ -3,9 +3,43 @@
 import Link from "next/link";
 import { SignInButton, useAuth, useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
+import { Check, Copy } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const TYPEWRITER_TEXT = "HACK THE HILL";
+const INSTALL_COMMAND = "curl -fsSL https://hillpost.dev/install.sh | sh";
+
+function InstallCommand() {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(INSTALL_COMMAND);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      title="Copy install command"
+      aria-label="Copy install command"
+      className="group flex items-center gap-3 border border-[#1F1F1F] px-4 py-3 font-mono text-sm text-[#555555] transition-all hover:border-white hover:text-white"
+    >
+      <span className="text-[#00FF41]">$</span>
+      <code>{INSTALL_COMMAND}</code>
+      {copied ? (
+        <Check className="h-4 w-4 shrink-0 text-[#00FF41]" />
+      ) : (
+        <Copy className="h-4 w-4 shrink-0" />
+      )}
+    </button>
+  );
+}
 
 export function HeroSection() {
   const { isSignedIn } = useAuth();
@@ -103,12 +137,7 @@ export function HeroSection() {
               </button>
             </SignInButton>
           )}
-          <Link
-            href="#features"
-            className="flex items-center gap-2 border border-[#1F1F1F] px-8 py-3 text-sm font-bold text-[#555555] uppercase tracking-wider transition-all hover:border-white hover:text-white"
-          >
-            [ LEARN MORE ]
-          </Link>
+          <InstallCommand />
         </motion.div>
       </div>
 

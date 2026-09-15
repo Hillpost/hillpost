@@ -8,6 +8,24 @@ export function FooterSection() {
           <Terminal className="h-4 w-4 text-[#00FF41]" />
           <span className="text-xs uppercase tracking-widest">HILLPOST</span>
         </div>
+        <nav className="flex items-center gap-6 text-xs uppercase tracking-widest">
+          <a
+            href="https://github.com/Hillpost/hillpost/blob/main/docs/cli/README.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#555555] hover:text-[#00FF41] transition-colors"
+          >
+            CLI
+          </a>
+          <a
+            href="https://github.com/Hillpost/hillpost/tree/main/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#555555] hover:text-[#00FF41] transition-colors"
+          >
+            Docs
+          </a>
+        </nav>
         <p className="text-center text-xs text-[#333333] tracking-wider sm:text-right">
           Made with ♥ by{" "}
           <a

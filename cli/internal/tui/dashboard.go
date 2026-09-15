@@ -291,7 +291,7 @@ func (d Dashboard) open(key string) (tea.Model, tea.Cmd) {
 
 // View draws the title, the current screen and one footer line.
 func (d Dashboard) View() string {
-	heading, help, body := "Hillpost", ui.Label.Render(d.homeHelp()), d.homeView()
+	heading, help, body := ui.Wordmark, ui.Label.Render(d.homeHelp()), d.homeView()
 	if p, ok := d.top(); ok {
 		heading, help, body = p.title(), p.help(), p.view(d.width, d.bodyHeight())
 	}
