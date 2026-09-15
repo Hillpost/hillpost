@@ -11,6 +11,7 @@ import (
 
 	"github.com/Hillpost/hillpost/cli/internal/api"
 	"github.com/Hillpost/hillpost/cli/internal/config"
+	"github.com/Hillpost/hillpost/cli/internal/tui"
 	"github.com/Hillpost/hillpost/cli/internal/ui"
 )
 
@@ -26,8 +27,24 @@ var (
 var rootCmd = &cobra.Command{
 	Use:           "hillpost",
 	Short:         "Join, run and judge hackathons from the terminal",
+	Long: "Join, run and judge hackathons from the terminal.\n\n" +
+		"Run it with no arguments in a terminal to open the dashboard, which reaches\n" +
+		"every flow below without leaving it.",
+	Args:          cobra.NoArgs,
 	SilenceUsage:  true,
 	SilenceErrors: true,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		// Anything that is not a person at a terminal gets the help it expects.
+		if jsonOut || !ui.IsTTY() {
+			return cmd.Help()
+		}
+		c, cfg, err := client()
+		if err != nil {
+			return err
+		}
+		c.Token = cfg.EffectiveToken()
+		return tui.RunDashboard(c, cfg)
+	},
 }
 
 func init() {

@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Hillpost/hillpost/cli/internal/api"
+	"github.com/Hillpost/hillpost/cli/internal/flow"
 	"github.com/Hillpost/hillpost/cli/internal/ui"
 )
 
@@ -20,9 +21,7 @@ import (
 type JudgeData struct {
 	HackathonName string
 	JudgeID       string
-	Submissions   []api.Submission
-	TeamNames     map[string]string // team id -> team name
-	Categories    []api.Category
+	flow.JudgeContext
 }
 
 // Judge is the interactive scoring screen: a list of submissions on the left, the
@@ -33,13 +32,11 @@ type JudgeData struct {
 func NewJudge(c *api.Client, data JudgeData) Judge {
 	scored := make(map[string]bool, len(data.Submissions))
 	for _, s := range data.Submissions {
-		for _, id := range s.JudgedBy {
-			if id == data.JudgeID {
-				scored[s.ID] = true
-			}
+		if flow.ScoredBy(s, data.JudgeID) {
+			scored[s.ID] = true
 		}
 	}
-	return Judge{client: c, data: data, scored: scored, width: 80, height: 24}
+	return Judge{client: c, data: data, scored: scored, exit: tea.Quit, width: 80, height: 24}
 }
 
 // Judge renders the scoring screen. Use NewJudge to build one.
@@ -47,6 +44,10 @@ type Judge struct {
 	client *api.Client
 	data   JudgeData
 	scored map[string]bool
+
+	// exit is what leaving the screen does: quit the program on its own,
+	// or go back to the menu when the dashboard is showing it.
+	exit tea.Cmd
 
 	width, height int
 	cursor        int
@@ -137,7 +138,9 @@ func (m Judge) updateList(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.status, m.errMsg = "", ""
 		m.fillInputs(nil)
 		return m, m.loadMyScores(s.ID)
-	case "q", "esc", "ctrl+c":
+	case "q", "esc":
+		return m, m.exit
+	case "ctrl+c":
 		return m, tea.Quit
 	}
 	return m, nil
@@ -175,7 +178,7 @@ func (m Judge) updateScoring(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "q":
 		if !onFeedback {
-			return m, tea.Quit
+			return m, m.exit
 		}
 	}
 
@@ -337,15 +340,20 @@ func (m Judge) View() string {
 	if m.data.HackathonName != "" {
 		title += "  " + ui.Label.Render(m.data.HackathonName)
 	}
-
-	body := m.listView()
 	help := "j/k move   enter score   o open project   q quit"
 	if m.scoring {
-		body = m.scoringView()
 		help = "tab next   s submit   o open project   esc back"
 	}
+	return title + "\n\n" + m.body() + "\n" + m.footer(help)
+}
 
-	return title + "\n\n" + body + "\n" + m.footer(help)
+// body is the screen without its title or footer, so the dashboard can put its
+// own frame around it.
+func (m Judge) body() string {
+	if m.scoring {
+		return m.scoringView()
+	}
+	return m.listView()
 }
 
 func (m Judge) footer(help string) string {

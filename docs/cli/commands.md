@@ -110,6 +110,22 @@ adds `"role"`.
 }
 ```
 
+## Dashboard
+
+### `hillpost`
+
+With no arguments, on a terminal, opens the interactive dashboard: a role-aware
+menu that reaches every flow below without leaving it. Without a terminal, or
+with `--json`, it prints the root help and exits 0.
+
+```sh
+hillpost
+```
+
+Keys: arrows or `j`/`k` move, `enter` opens, `esc` goes back, `?` shows the key
+list, `q` quits from the menu. There is no JSON form: the dashboard is a
+terminal UI, and everything it does has a command below.
+
 ## Account
 
 ### `hillpost login`

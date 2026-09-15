@@ -3,14 +3,13 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/Hillpost/hillpost/cli/internal/api"
 	"github.com/Hillpost/hillpost/cli/internal/config"
+	"github.com/Hillpost/hillpost/cli/internal/flow"
 	"github.com/Hillpost/hillpost/cli/internal/ui"
 )
 
@@ -95,8 +94,8 @@ func init() {
 
 func loginWithToken(ctx context.Context, c *api.Client, cfg config.Config) error {
 	c.Token = loginToken
-	var me api.WhoAmI
-	if err := c.Query(ctx, "cli:whoami", nil, &me); err != nil {
+	me, err := flow.WhoAmI(ctx, c)
+	if err != nil {
 		return err
 	}
 	cfg.Token = loginToken
@@ -107,8 +106,8 @@ func loginWithToken(ctx context.Context, c *api.Client, cfg config.Config) error
 }
 
 func loginWithDevice(ctx context.Context, c *api.Client, cfg config.Config) error {
-	var device api.DeviceLogin
-	if err := c.Mutate(ctx, "cli:startDeviceLogin", nil, &device); err != nil {
+	device, err := flow.StartLogin(ctx, c)
+	if err != nil {
 		return err
 	}
 
@@ -118,31 +117,10 @@ func loginWithDevice(ctx context.Context, c *api.Client, cfg config.Config) erro
 	fmt.Println()
 	ui.OpenURL(device.VerificationURL)
 
-	interval := time.Duration(device.Interval) * time.Second
-	if interval <= 0 {
-		interval = 2 * time.Second
-	}
-
 	var claim api.DeviceClaim
-	err := ui.Spin("Waiting for approval in the browser", func() error {
-		for {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(interval):
-			}
-			var c2 api.DeviceClaim
-			if err := c.Mutate(ctx, "cli:claimDevice", map[string]any{"deviceCode": device.DeviceCode}, &c2); err != nil {
-				return err
-			}
-			switch c2.Status {
-			case "approved":
-				claim = c2
-				return nil
-			case "expired":
-				return errors.New("the login code expired, run hillpost login again")
-			}
-		}
+	err = ui.Spin("Waiting for approval in the browser", func() error {
+		claim, err = flow.WaitForApproval(ctx, c, device)
+		return err
 	})
 	if err != nil {
 		return err

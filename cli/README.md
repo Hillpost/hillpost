@@ -14,6 +14,11 @@ macOS and Linux. On Windows, download the zip from the
 newer, `go install github.com/Hillpost/hillpost/cli@latest`. From this
 directory, `go build -o hillpost .`.
 
+## Dashboard
+
+`hillpost` with no arguments opens an interactive, role-aware dashboard that
+reaches every flow: see [docs/cli/README.md](../docs/cli/README.md#dashboard).
+
 ## Log in
 
 ```sh

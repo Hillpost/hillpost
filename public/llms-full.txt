@@ -82,6 +82,44 @@ HILLPOST_TOKEN=hp_... hillpost whoami --json
 `hillpost logout` forgets the saved token. It does not revoke it; revoke tokens
 from the dashboard.
 
+## Dashboard
+
+```sh
+hillpost
+```
+
+With no arguments, on a terminal, `hillpost` opens a dashboard: who you are,
+which hackathon you are in, and a menu of what your role there lets you do.
+Every screen is one `enter` away, and `esc` comes back.
+
+| Role | Menu |
+| --- | --- |
+| competitor | My team, Submit, Submissions, Leaderboard |
+| judge | Judge submissions, Leaderboard |
+| organizer | Overview (dates, status, join codes), Categories, Members, Submissions, Leaderboard |
+| everyone | Switch hackathon, Join a hackathon with a code, Discover public hackathons, Create a hackathon, Log out |
+
+The screens are the commands you already know. Submit is the `hillpost submit`
+form, pre-filled from your last submission. Judge is the `hillpost judge`
+scoring screen. Members approves and rejects in place with `a` and `r`.
+Leaderboard reloads with `r`.
+
+Not logged in, the dashboard offers the same browser login as `hillpost login`,
+says what it is waiting for while you approve it, and carries on to the menu.
+
+| Key | What it does |
+| --- | --- |
+| up/down, `j`/`k` | move |
+| `enter` | open the item, or send a form |
+| `esc` | back one screen, or cancel a form |
+| `?` | show or hide the key list |
+| `q` | quit from the menu, back from a screen |
+| `ctrl+c` | quit from anywhere |
+
+The dashboard fits an 80x24 terminal. Without a terminal, or with `--json`,
+`hillpost` prints the root help and exits 0, so scripts and agents see what they
+always did.
+
 ## The current hackathon
 
 Almost every command acts on one hackathon. The CLI finds it in this order:
@@ -312,6 +350,22 @@ adds `"role"`.
   "order": 0
 }
 ```
+
+## Dashboard
+
+### `hillpost`
+
+With no arguments, on a terminal, opens the interactive dashboard: a role-aware
+menu that reaches every flow below without leaving it. Without a terminal, or
+with `--json`, it prints the root help and exits 0.
+
+```sh
+hillpost
+```
+
+Keys: arrows or `j`/`k` move, `enter` opens, `esc` goes back, `?` shows the key
+list, `q` quits from the menu. There is no JSON form: the dashboard is a
+terminal UI, and everything it does has a command below.
 
 ## Account
 

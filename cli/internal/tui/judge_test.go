@@ -8,18 +8,21 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Hillpost/hillpost/cli/internal/api"
+	"github.com/Hillpost/hillpost/cli/internal/flow"
 )
 
 func testData() JudgeData {
 	return JudgeData{
 		HackathonName: "E2E 57",
 		JudgeID:       "judge_1",
-		Submissions: []api.Submission{
-			{ID: "sub_a", TeamID: "team_a", Name: "Aardvark", Description: "First project", ProjectURL: "https://example.com/a", SubmissionCount: 1},
-			{ID: "sub_b", TeamID: "team_b", Name: "Bison", Description: "Second project", ProjectURL: "https://example.com/b", SubmissionCount: 2, JudgedBy: []string{"judge_1"}},
+		JudgeContext: flow.JudgeContext{
+			Submissions: []api.Submission{
+				{ID: "sub_a", TeamID: "team_a", Name: "Aardvark", Description: "First project", ProjectURL: "https://example.com/a", SubmissionCount: 1},
+				{ID: "sub_b", TeamID: "team_b", Name: "Bison", Description: "Second project", ProjectURL: "https://example.com/b", SubmissionCount: 2, JudgedBy: []string{"judge_1"}},
+			},
+			TeamNames:  map[string]string{"team_a": "Team A", "team_b": "Team B"},
+			Categories: []api.Category{{ID: "cat_1", Name: "Creativity", MaxScore: 10}, {ID: "cat_2", Name: "Execution", MaxScore: 5}},
 		},
-		TeamNames:  map[string]string{"team_a": "Team A", "team_b": "Team B"},
-		Categories: []api.Category{{ID: "cat_1", Name: "Creativity", MaxScore: 10}, {ID: "cat_2", Name: "Execution", MaxScore: 5}},
 	}
 }
 
