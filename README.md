@@ -19,6 +19,20 @@ A **king-of-the-hill** style hackathon judging platform where competitors submit
 - **[Tailwind CSS](https://tailwindcss.com)** — Styling
 - **[TypeScript](https://typescriptlang.org)** — Type safety
 
+## CLI
+
+`hillpost` joins, runs and judges hackathons from the terminal, and every
+command takes `--json` for scripts and agents.
+
+```sh
+curl -fsSL https://hillpost.dev/install.sh | sh
+hillpost login
+```
+
+See [docs/cli/README.md](docs/cli/README.md) for the full guide,
+[docs/cli/commands.md](docs/cli/commands.md) for the command reference and
+[docs/cli/agents.md](docs/cli/agents.md) for driving it from an agent.
+
 ## Getting Started
 
 ### Prerequisites
