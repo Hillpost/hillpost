@@ -1,0 +1,27 @@
+# Hillpost
+
+> Hillpost is a king-of-the-hill hackathon platform: competitors submit and resubmit projects, judges score them across categories, and a live leaderboard ranks the teams. The `hillpost` CLI drives all of it from the terminal, and every command takes `--json` so agents and scripts can use it without touching a terminal UI.
+
+## CLI documentation
+
+- [CLI overview](https://raw.githubusercontent.com/Hillpost/hillpost/main/docs/cli/README.md): install, the `hillpost login` device flow, the current-hackathon concept, output modes, config file, exit codes, troubleshooting.
+- [Command reference](https://raw.githubusercontent.com/Hillpost/hillpost/main/docs/cli/commands.md): every command and subcommand, its flags, an example, and the JSON it prints with `--json`.
+- [Agent guide](https://raw.githubusercontent.com/Hillpost/hillpost/main/docs/cli/agents.md): how an AI agent should drive the CLI, with end-to-end scripts for joining, submitting, hosting and judging.
+- [Agent skill](https://raw.githubusercontent.com/Hillpost/hillpost/main/skills/hillpost-cli/SKILL.md): the same rules packaged as a Claude Code skill.
+
+## Install
+
+- [install.sh](https://hillpost.dev/install.sh): `curl -fsSL https://hillpost.dev/install.sh | sh` installs the CLI on macOS and Linux.
+- [Releases](https://github.com/Hillpost/hillpost/releases): archives for macOS, Linux and Windows, plus checksums.
+- [Source](https://github.com/Hillpost/hillpost): the Next.js app, the Convex backend and the Go CLI.
+
+## Web
+
+- [Hillpost](https://hillpost.dev): what Hillpost is.
+- [Discover](https://hillpost.dev/discover): public hackathons open to anyone.
+- [Dashboard](https://hillpost.dev/dashboard): your hackathons, and the panel that mints CLI tokens.
+- [CLI login](https://hillpost.dev/cli/login): where `hillpost login` sends you to approve a terminal.
+
+## Optional
+
+- [llms-full.txt](https://hillpost.dev/llms-full.txt): the three CLI documents above, concatenated.
