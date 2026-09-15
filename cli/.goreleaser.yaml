@@ -1,0 +1,37 @@
+# Builds the hillpost CLI archives. Run from this directory; the CLI is its own
+# Go module.
+#
+# Releases are tagged cli/vX.Y.Z. GoReleaser only understands semver tags, so
+# the release workflow points GORELEASER_CURRENT_TAG at the matching bare vX.Y.Z
+# tag and uploads dist/ to the cli/ tag itself with gh. That is why publishing
+# is disabled here.
+version: 2
+
+project_name: hillpost
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: ./cmd/hillpost
+    binary: hillpost
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - name_template: "hillpost_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  disable: true

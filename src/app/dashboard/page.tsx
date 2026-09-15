@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { CreateHackathonDialog } from "@/components/create-hackathon-dialog";
 import { JoinHackathonDialog } from "@/components/join-hackathon-dialog";
+import { CliPanel } from "@/components/cli-panel";
 
 const roleBadgeClass = (role: string) => {
   switch (role) {
@@ -27,7 +28,7 @@ const roleBadgeClass = (role: string) => {
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isLoaded } = useUser();
-  const hackathons = useQuery(api.hackathons.listMine);
+  const hackathons = useQuery(api.hackathons.listMine, {});
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
@@ -205,6 +206,8 @@ export default function DashboardPage() {
           </motion.div>
         )}
       </div>
+
+      <CliPanel />
 
       <CreateHackathonDialog
         isOpen={showCreateDialog}

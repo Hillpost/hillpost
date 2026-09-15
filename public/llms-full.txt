@@ -1,0 +1,1079 @@
+# Hillpost CLI documentation
+
+> docs/cli/README.md, docs/cli/commands.md and docs/cli/agents.md from
+> https://github.com/Hillpost/hillpost, concatenated. The index is at
+> https://hillpost.dev/llms.txt
+
+---
+
+Source: docs/cli/README.md
+
+# hillpost CLI
+
+`hillpost` joins, runs and judges Hillpost hackathons from the terminal. It
+talks to the Hillpost Convex backend over HTTPS and needs no Node tooling.
+
+- [Command reference](commands.md)
+- [Driving the CLI from an agent](agents.md)
+
+## Install
+
+```sh
+curl -fsSL https://hillpost.dev/install.sh | sh
+```
+
+macOS and Linux. The script downloads the newest `cli/v*` release, verifies its
+checksum, and installs to `/usr/local/bin` when that is writable, else
+`~/.local/bin`. Set `HILLPOST_INSTALL_DIR` to choose somewhere else.
+
+With Go 1.25 or newer:
+
+```sh
+go install github.com/Hillpost/hillpost/cli/cmd/hillpost@latest
+```
+
+On Windows, download the `.zip` for your architecture from the
+[releases page](https://github.com/Hillpost/hillpost/releases) and put
+`hillpost.exe` somewhere on your `PATH`.
+
+From a clone:
+
+```sh
+cd cli
+go build -o hillpost ./cmd/hillpost      # hillpost.exe on Windows
+```
+
+Check it:
+
+```sh
+hillpost --version
+```
+
+## Log in
+
+```sh
+hillpost login
+```
+
+This is a device flow. The CLI prints an eight-character code, opens
+`https://hillpost.dev/cli/login?code=XXXX-XXXX` in your browser, and polls every
+two seconds while you sign in and approve the terminal. Codes expire after ten
+minutes; run `hillpost login` again for a new one.
+
+```
+Authorize this terminal
+code  4KQ7-W2MH
+open  https://hillpost.dev/cli/login?code=4KQ7-W2MH
+```
+
+For CI and anywhere without a browser, create a token from the CLI panel on the
+Hillpost dashboard and pass it:
+
+```sh
+hillpost login --token hp_...
+```
+
+Or set it per invocation and skip the config file entirely:
+
+```sh
+HILLPOST_TOKEN=hp_... hillpost whoami --json
+```
+
+`hillpost logout` forgets the saved token. It does not revoke it; revoke tokens
+from the dashboard.
+
+## Dashboard
+
+```sh
+hillpost
+```
+
+With no arguments, on a terminal, `hillpost` opens a dashboard: who you are,
+which hackathon you are in, and a menu of what your role there lets you do.
+Every screen is one `enter` away, and `esc` comes back.
+
+| Role | Menu |
+| --- | --- |
+| competitor | My team, Submit, Submissions, Leaderboard |
+| judge | Judge submissions, Leaderboard |
+| organizer | Overview (dates, status, join codes), Categories, Members, Submissions, Leaderboard |
+| everyone | Switch hackathon, Join a hackathon with a code, Discover public hackathons, Create a hackathon, Log out |
+
+The screens are the commands you already know. Submit is the `hillpost submit`
+form, pre-filled from your last submission. Judge is the `hillpost judge`
+scoring screen. Members approves and rejects in place with `a` and `r`.
+Leaderboard reloads with `r`.
+
+Not logged in, the dashboard offers the same browser login as `hillpost login`,
+says what it is waiting for while you approve it, and carries on to the menu.
+
+| Key | What it does |
+| --- | --- |
+| up/down, `j`/`k` | move |
+| `enter` | open the item, or send a form |
+| `esc` | back one screen, or cancel a form |
+| `?` | show or hide the key list |
+| `q` | quit from the menu, back from a screen |
+| `ctrl+c` | quit from anywhere |
+
+The dashboard fits an 80x24 terminal. Without a terminal, or with `--json`,
+`hillpost` prints the root help and exits 0, so scripts and agents see what they
+always did.
+
+## The current hackathon
+
+Almost every command acts on one hackathon. The CLI finds it in this order:
+
+1. `--hackathon <id>` (short `-H`) on the command itself.
+2. The hackathon saved by `hillpost use`, which `hillpost join` and
+   `hillpost host create` also set.
+3. On a terminal, an interactive picker over the hackathons you belong to. The
+   pick is not saved.
+
+With `--json`, or when stdin is not a terminal, step 3 is skipped and the
+command fails with:
+
+```
+No hackathon selected. Run: hillpost use <id|code>, or pass -H <id>
+```
+
+```sh
+hillpost use                    # pick one interactively
+hillpost use jd7abc...          # by hackathon id
+hillpost use ABC123             # or by a six-character join code
+hillpost hackathons             # the ones you belong to, current one marked *
+```
+
+## Output modes
+
+By default commands print styled tables and fields for a human. `--json` prints
+the raw backend value, indented, and nothing else: no spinners, no headings, no
+confirmation lines. It is a global flag, so it works on any command.
+
+```sh
+hillpost hackathons --json
+```
+
+`--json` also disables every prompt and every full-screen view, so it is the
+right flag for scripts, CI and agents. See [agents.md](agents.md).
+
+Running `hillpost` with no arguments opens the interactive dashboard in a
+terminal, and prints help otherwise.
+
+## Environment and config
+
+| Variable | Effect |
+| --- | --- |
+| `HILLPOST_TOKEN` | Auth token. Overrides the saved one. |
+| `HILLPOST_API_URL` | Convex deployment to talk to. Defaults to production. |
+
+The config file holds the token, the current hackathon and its name, written
+with mode 0600:
+
+| OS | Path |
+| --- | --- |
+| Windows | `%AppData%\hillpost\config.json` |
+| macOS | `~/Library/Application Support/hillpost/config.json` |
+| Linux | `$XDG_CONFIG_HOME/hillpost/config.json`, else `~/.config/hillpost/config.json` |
+
+```json
+{
+  "token": "hp_...",
+  "hackathon_id": "jd7...",
+  "hackathon_name": "Autumn Jam"
+}
+```
+
+`api_url` is also accepted in the file, and `HILLPOST_API_URL` overrides it.
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| 0 | The command succeeded. |
+| 1 | Anything else. The message goes to stderr; stdout stays empty. |
+
+There are no other exit codes. Backend errors are printed verbatim, so branch on
+the message when you need to tell failures apart.
+
+## Troubleshooting
+
+**`Not logged in. Run: hillpost login`**
+No token in the config file and no `HILLPOST_TOKEN`. Log in, or export the
+token.
+
+**`Invalid CLI token`**
+The token was revoked or mistyped. Create a new one from the dashboard's CLI
+panel, or run `hillpost login` again.
+
+**`This login code has expired`**
+The device code lived past ten minutes. Run `hillpost login` again.
+
+**`No hackathon selected. Run: hillpost use <id|code>, or pass -H <id>`**
+Nothing set the current hackathon and the CLI cannot prompt. Pass
+`-H <hackathonId>` or run `hillpost use`.
+
+**`Rate limited. Please wait N more minute(s) before submitting again.`**
+Organizers set a minimum gap between a team's submissions
+(`submissionFrequencyMinutes`, 30 by default). Wait it out; retrying sooner
+fails the same way. `hillpost host show` prints the gap for the current
+hackathon.
+
+**`Only approved judges and organizers can score submissions`**
+You joined with a judge code but an organizer has not approved you yet.
+`hillpost whoami` shows your status as `pending`. The organizer clears it with
+`hillpost host members approve <memberId>`.
+
+**`Submissions are not open yet` / `Submissions are closed`**
+The submission window does not include the current time. `hillpost host show`
+prints the window.
+
+**`you are not on a team yet, run: hillpost team create <name>`**
+Only a team can submit. Create or join one first.
+
+**`cannot reach https://... (set HILLPOST_API_URL to use another deployment)`**
+The deployment is unreachable. Check the network, or unset a stale
+`HILLPOST_API_URL`.
+
+---
+
+Source: docs/cli/commands.md
+
+# hillpost command reference
+
+Every command, its flags, an example, and what `--json` prints. See
+[README.md](README.md) for install, login and configuration.
+
+## Global flags
+
+| Flag | Meaning |
+| --- | --- |
+| `--json` | Print the raw backend value and nothing else. |
+| `-H`, `--hackathon <id>` | Act on this hackathon, overriding `hillpost use`. |
+| `-h`, `--help` | Help for the command. |
+| `-v`, `--version` | Print the version (root command only). |
+
+Timestamps in JSON are milliseconds since the Unix epoch. Ids are Convex
+document ids. Numbers may be spelled `10` or `10.0`.
+
+`hillpost` with no arguments opens the interactive dashboard in a terminal, and
+prints help otherwise. `hillpost completion <shell>` prints a shell completion
+script.
+
+## Shared shapes
+
+Several commands return these.
+
+`Hackathon`:
+
+```json
+{
+  "_id": "jd7...",
+  "_creationTime": 1757808000000.0,
+  "name": "Autumn Jam",
+  "description": "Two days, one hill.",
+  "organizerId": "user_...",
+  "startDate": 1759482000000,
+  "submissionsStartDate": 1759482000000,
+  "submissionsEndDate": 1759683600000,
+  "endDate": 1759683600000,
+  "submissionFrequencyMinutes": 30,
+  "isActive": true,
+  "isPublic": true,
+  "competitorJoinCode": "ABC123",
+  "judgeJoinCode": "XYZ789",
+  "createdAt": 1757808000000
+}
+```
+
+`competitorJoinCode` and `judgeJoinCode` are only present for organizers and
+competitors. `hackathons:listMine` adds `"myRole"`, and a lookup by join code
+adds `"role"`.
+
+`Team`:
+
+```json
+{
+  "_id": "jt4...",
+  "_creationTime": 1759482100000.0,
+  "hackathonId": "jd7...",
+  "name": "Otters",
+  "createdAt": 1759482100000,
+  "members": [
+    {
+      "_id": "jm2...",
+      "userId": "user_...",
+      "userName": "Ada",
+      "role": "competitor",
+      "teamId": "jt4...",
+      "status": "approved",
+      "joinedAt": 1759482050000
+    }
+  ]
+}
+```
+
+`Submission`:
+
+```json
+{
+  "_id": "js9...",
+  "hackathonId": "jd7...",
+  "teamId": "jt4...",
+  "name": "Riverbed",
+  "description": "A river gauge dashboard.",
+  "projectUrl": "https://github.com/otters/riverbed",
+  "demoUrl": "https://youtu.be/...",
+  "deployedUrl": "https://riverbed.example",
+  "whatsNew": "Added the map view.",
+  "changelog": [
+    { "submissionCount": 1, "whatsNew": "", "submittedAt": 1759490000000 }
+  ],
+  "submittedAt": 1759493600000,
+  "submittedBy": "user_...",
+  "submissionCount": 2,
+  "judgedBy": ["user_..."]
+}
+```
+
+`submittedBy` and `judgedBy` are blanked for callers who may not see them.
+
+`Category`:
+
+```json
+{
+  "_id": "jc1...",
+  "hackathonId": "jd7...",
+  "name": "Execution",
+  "description": "Does it work",
+  "maxScore": 10,
+  "order": 0
+}
+```
+
+## Dashboard
+
+### `hillpost`
+
+With no arguments, on a terminal, opens the interactive dashboard: a role-aware
+menu that reaches every flow below without leaving it. Without a terminal, or
+with `--json`, it prints the root help and exits 0.
+
+```sh
+hillpost
+```
+
+Keys: arrows or `j`/`k` move, `enter` opens, `esc` goes back, `?` shows the key
+list, `q` quits from the menu. There is no JSON form: the dashboard is a
+terminal UI, and everything it does has a command below.
+
+## Account
+
+### `hillpost login`
+
+Log in by approving a code in the browser, or pass `--token` for CI.
+
+| Flag | Meaning |
+| --- | --- |
+| `--token <hp_...>` | Log in with an existing token instead of the browser flow. |
+
+```sh
+hillpost login
+hillpost login --token hp_xxx --json
+```
+
+JSON:
+
+```json
+{ "loggedIn": true, "userName": "Ada" }
+```
+
+### `hillpost logout`
+
+Forget the saved token. Prints `Logged out.` and takes no flags of its own.
+`--json` prints nothing extra.
+
+```sh
+hillpost logout
+```
+
+### `hillpost whoami`
+
+Show the logged-in user and their hackathons.
+
+```sh
+hillpost whoami --json
+```
+
+JSON:
+
+```json
+{
+  "userId": "user_...",
+  "userName": "Ada",
+  "memberships": [
+    {
+      "hackathonId": "jd7...",
+      "name": "Autumn Jam",
+      "role": "competitor",
+      "status": "approved",
+      "isActive": true
+    }
+  ]
+}
+```
+
+`role` is `organizer`, `judge` or `competitor`; `status` is `pending`,
+`approved` or `rejected`.
+
+## Hackathons
+
+### `hillpost discover`
+
+List public hackathons anyone can join. Works without a token.
+
+```sh
+hillpost discover --json
+```
+
+JSON: an array of `Hackathon`.
+
+### `hillpost hackathons`
+
+List the hackathons you belong to. The table marks the current one with `*`.
+
+```sh
+hillpost hackathons --json
+```
+
+JSON: an array of `Hackathon`, each with `"myRole"`.
+
+### `hillpost use [id|code]`
+
+Set the hackathon other commands act on, saving it to the config file. With no
+argument on a terminal it opens a picker. An argument longer than six characters
+is read as a hackathon id, otherwise as a join code.
+
+```sh
+hillpost use jd7abc...
+hillpost use ABC123
+```
+
+JSON:
+
+```json
+{ "hackathonId": "jd7...", "name": "Autumn Jam" }
+```
+
+### `hillpost join [code]`
+
+Join a hackathon with a competitor or judge invite code, or with `--public` and
+a hackathon id. The joined hackathon becomes the current one. Joining with a
+judge code leaves you `pending` until an organizer approves you.
+
+| Flag | Meaning |
+| --- | --- |
+| `--public` | Join a public hackathon by id instead of by code. |
+
+```sh
+hillpost join ABC123 --json
+hillpost join --public jd7abc... --json
+```
+
+JSON:
+
+```json
+{ "hackathonId": "jd7...", "alreadyMember": false }
+```
+
+## Teams
+
+### `hillpost team list`
+
+List every team in the current hackathon.
+
+```sh
+hillpost team list --json
+```
+
+JSON: an array of `Team`.
+
+### `hillpost team show`
+
+Show the team you are on.
+
+```sh
+hillpost team show --json
+```
+
+JSON: one `Team`, or `null` when you are not on a team.
+
+### `hillpost team create <name>`
+
+Create a team in the current hackathon and join it.
+
+```sh
+hillpost team create "Otters" --json
+```
+
+JSON: the new team id as a JSON string, for example `"jt4..."`.
+
+### `hillpost team join [teamId]`
+
+Join a team in the current hackathon. With no id on a terminal it opens a
+picker; with `--json` the id is required. Leave your current team first.
+
+```sh
+hillpost team join jt4abc... --json
+```
+
+JSON: the team id as a JSON string.
+
+### `hillpost team leave`
+
+Leave your team in the current hackathon.
+
+```sh
+hillpost team leave --json
+```
+
+JSON: `null`.
+
+## Competing
+
+### `hillpost submit`
+
+Submit or resubmit your team's project. With `--name`, `--description` and
+`--url` it submits straight away; otherwise, on a terminal, it opens a form
+pre-filled with your last submission. Resubmitting is rate limited by the
+hackathon's `submissionFrequencyMinutes`.
+
+| Flag | Meaning |
+| --- | --- |
+| `--name <string>` | Project name. Required. |
+| `--description <string>` | What the project does. Required. |
+| `--url <URL>` | Source code URL. Required. |
+| `--demo <URL>` | Demo video URL. |
+| `--deployed <URL>` | Deployed app URL. |
+| `--whats-new <string>` | What changed since the last submission. |
+
+```sh
+hillpost submit --json \
+  --name Riverbed \
+  --description "A river gauge dashboard." \
+  --url https://github.com/otters/riverbed \
+  --deployed https://riverbed.example \
+  --whats-new "Added the map view."
+```
+
+JSON: the saved `Submission`, read back after the write.
+
+### `hillpost submissions` / `hillpost submissions list`
+
+List the current hackathon's submissions. The bare command and `list` do the
+same thing.
+
+```sh
+hillpost submissions --json
+```
+
+JSON: an array of `Submission`.
+
+### `hillpost submissions show <id>`
+
+Show one submission. Without `--json` it also prints the changelog and any judge
+feedback the hackathon's settings let you see.
+
+```sh
+hillpost submissions show js9abc... --json
+```
+
+JSON: one `Submission`, or `null`.
+
+### `hillpost leaderboard`
+
+Show the current hackathon's ranked teams.
+
+| Flag | Meaning |
+| --- | --- |
+| `--watch` | Redraw every five seconds until you press `q`. Needs a terminal. |
+
+```sh
+hillpost leaderboard --json
+```
+
+JSON:
+
+```json
+{
+  "entries": [
+    {
+      "rank": 1,
+      "teamId": "jt4...",
+      "teamName": "Otters",
+      "latestSubmission": { "_id": "js9..." },
+      "averageScore": 8.5,
+      "overallScore": 17.0,
+      "categoryScores": [
+        {
+          "categoryId": "jc1...",
+          "categoryName": "Execution",
+          "maxScore": 10,
+          "averageScore": 8.5,
+          "judgeCount": 2
+        }
+      ],
+      "totalJudgeCount": 2
+    }
+  ],
+  "maxPossibleScore": 20,
+  "leaderboardHidden": false
+}
+```
+
+`latestSubmission` is a full `Submission` or `null`. When `leaderboardHidden` is
+true the organizer has hidden scores from you and `entries` carries no scores.
+
+## Judging
+
+### `hillpost judge`
+
+Open the two-pane scoring screen for the current hackathon. Needs a terminal and
+has no `--json` form; use the subcommands instead.
+
+```sh
+hillpost judge
+```
+
+### `hillpost judge list`
+
+List the submissions you can score. The table marks the ones you have already
+scored for their current iteration.
+
+```sh
+hillpost judge list --json
+```
+
+JSON: an array of `Submission`.
+
+### `hillpost judge score <submissionId>`
+
+Score one category of one submission. Re-running it replaces your earlier score
+for that category.
+
+| Flag | Meaning |
+| --- | --- |
+| `--category <id or name>` | Category id, or its name ignoring case. |
+| `--score <number>` | Score from 1 to the category maximum. Fractions allowed. |
+| `--feedback <string>` | Feedback to leave with the score. |
+
+```sh
+hillpost judge score js9abc... --category Execution --score 8 \
+  --feedback "Solid, needs error handling." --json
+```
+
+JSON: the score id as a JSON string.
+
+### `hillpost judge scores <submissionId>`
+
+Show your scores for a submission, and the averages when the hackathon's
+settings make them visible.
+
+```sh
+hillpost judge scores js9abc... --json
+```
+
+JSON:
+
+```json
+{
+  "mine": [
+    {
+      "_id": "jsc...",
+      "submissionId": "js9...",
+      "categoryId": "jc1...",
+      "judgeId": "user_...",
+      "score": 8,
+      "feedback": "Solid, needs error handling.",
+      "scoredAt": 1759494000000,
+      "submissionCount": 2
+    }
+  ],
+  "all": {
+    "scoresHidden": false,
+    "entries": [
+      { "categoryId": "jc1...", "averageScore": 8.5, "judgeCount": 2 }
+    ]
+  }
+}
+```
+
+## Hosting
+
+### `hillpost host create`
+
+Create a hackathon and make it the current one. Pass the fields as flags, or run
+it on a terminal with no `--name` to fill in a form. Dates accept `2026-10-03`,
+`2026-10-03T09:00` or a full RFC3339 timestamp, and are read in local time.
+
+| Flag | Meaning |
+| --- | --- |
+| `--name <string>` | Hackathon name. Required. |
+| `--start <date>` | When the hackathon starts. Required. |
+| `--end <date>` | When the hackathon ends. Required. |
+| `--description <string>` | One paragraph about the hackathon. |
+| `--submissions-start <date>` | When submissions open. Defaults to the start. |
+| `--submissions-end <date>` | When submissions close. Defaults to the end. |
+| `--frequency <int>` | Minutes competitors must wait between submissions. Default 30. |
+| `--public` | List it on the public discover page. |
+| `--as <string>` | Your display name, when your account has none yet. |
+
+```sh
+hillpost host create --json \
+  --name "Autumn Jam" \
+  --start 2026-10-03T09:00 --end 2026-10-05T17:00 \
+  --frequency 30 --public
+```
+
+JSON: the created `Hackathon`, including its join codes.
+
+### `hillpost host show`
+
+Show the current hackathon's settings and counts.
+
+```sh
+hillpost host show --json
+```
+
+JSON: one `Hackathon`. The member, category and submission counts are only in
+the human output.
+
+### `hillpost host codes`
+
+Show the competitor and judge join codes.
+
+```sh
+hillpost host codes --json
+```
+
+JSON:
+
+```json
+{
+  "competitorJoinCode": "ABC123",
+  "judgeJoinCode": "XYZ789",
+  "competitorUrl": "https://hillpost.dev/join/ABC123",
+  "judgeUrl": "https://hillpost.dev/join/XYZ789"
+}
+```
+
+Only organizers see `judgeJoinCode`.
+
+### `hillpost host settings`
+
+Change only the settings you pass as flags. Dates are read in local time.
+Passing none is an error.
+
+| Flag | Meaning |
+| --- | --- |
+| `--name <string>` | Rename the hackathon. |
+| `--description <string>` | Replace the description. |
+| `--start <date>` | Move the start. |
+| `--end <date>` | Move the end. |
+| `--frequency <int>` | Minutes between submissions. |
+| `--public` | List it on the public discover page. |
+| `--active` | Whether the hackathon is running. |
+| `--feedback-visible` | Let competitors read judge feedback. |
+| `--scores-visible <all\|judges\|none>` | Who can see scores. |
+
+Boolean flags take an explicit value to turn something off, for example
+`--public=false`.
+
+```sh
+hillpost host settings --frequency 15 --scores-visible judges --json
+```
+
+JSON: the hackathon id as a JSON string.
+
+### `hillpost host categories list`
+
+List the judging categories.
+
+```sh
+hillpost host categories list --json
+```
+
+JSON: an array of `Category`, ordered by `order`.
+
+### `hillpost host categories add <name>`
+
+Add a judging category.
+
+| Flag | Meaning |
+| --- | --- |
+| `--description <string>` | What judges should look for. |
+| `--max <int>` | Highest score a judge can give. Default 10. |
+
+```sh
+hillpost host categories add "Execution" --max 20 --description "Does it work" --json
+```
+
+JSON: the new category id as a JSON string.
+
+### `hillpost host categories edit <categoryId>`
+
+Change a category's name, description or maximum score. Passing none is an
+error.
+
+| Flag | Meaning |
+| --- | --- |
+| `--name <string>` | Rename the category. |
+| `--description <string>` | Replace the description. |
+| `--max <int>` | Highest score a judge can give. |
+
+```sh
+hillpost host categories edit jc1abc... --max 10 --json
+```
+
+JSON: the category id as a JSON string.
+
+### `hillpost host categories remove <categoryId>`
+
+Delete a category. Prints a confirmation line, and nothing at all with `--json`.
+
+```sh
+hillpost host categories remove jc1abc...
+```
+
+### `hillpost host members list`
+
+List members of the current hackathon, optionally filtered. Only organizers can
+see the list.
+
+| Flag | Meaning |
+| --- | --- |
+| `--role <organizer\|judge\|competitor>` | Only this role. |
+| `--status <pending\|approved\|rejected>` | Only this status. |
+
+```sh
+hillpost host members list --role judge --status pending --json
+```
+
+JSON: an array of members, filtered by the flags:
+
+```json
+[
+  {
+    "_id": "jm2...",
+    "userId": "user_...",
+    "userName": "Ada",
+    "role": "judge",
+    "teamId": "jt4...",
+    "status": "pending",
+    "joinedAt": 1759482050000
+  }
+]
+```
+
+### `hillpost host members approve <memberId>` / `hillpost host members reject <memberId>`
+
+Approve or reject a pending member. Judges cannot score until approved.
+
+```sh
+hillpost host members approve jm2abc... --json
+```
+
+JSON: the member id as a JSON string.
+
+### `hillpost host members role <memberId> <organizer|judge|competitor>`
+
+Change what someone can do.
+
+```sh
+hillpost host members role jm2abc... judge --json
+```
+
+JSON: the member id as a JSON string.
+
+### `hillpost host members remove <memberId>`
+
+Remove someone from the hackathon. Prints a confirmation line, and nothing at
+all with `--json`.
+
+```sh
+hillpost host members remove jm2abc...
+```
+
+---
+
+Source: docs/cli/agents.md
+
+# Driving the hillpost CLI from an agent
+
+The CLI is built so an agent never has to read a table or drive a terminal UI.
+Four rules cover everything.
+
+1. **Always pass `--json`.** It prints the raw backend value and nothing else:
+   no spinners, no headings, no confirmation lines. It also turns off every
+   prompt and every full-screen view, so a command either succeeds or fails with
+   a message instead of hanging.
+2. **Authenticate with `HILLPOST_TOKEN`.** Export it and skip `hillpost login`
+   entirely. The token is the whole credential; there is no session to refresh.
+3. **Pass `--hackathon <id>` (`-H`) on every command.** Do not depend on
+   `hillpost use`, which writes shared state to the config file. Get the id once
+   from `hillpost hackathons --json` or `hillpost join ... --json`.
+4. **Never invoke the TUI.** `hillpost` with no arguments, `hillpost judge` with
+   no subcommand, and `hillpost leaderboard --watch` all want a terminal. Use
+   `hillpost judge list`, `hillpost judge score` and `hillpost leaderboard
+   --json` instead.
+
+## Contract
+
+- Exit 0 means success, exit 1 means failure. There are no other codes.
+- On success stdout holds one JSON value; on failure stdout is empty and the
+  message is on stderr.
+- Timestamps are milliseconds since the Unix epoch. Numbers may be spelled `10`
+  or `10.0`, so parse them as floats.
+- Mutations that only confirm a write return the affected id as a bare JSON
+  string, for example `"jt4abc..."`.
+
+Set up once:
+
+```sh
+export HILLPOST_TOKEN=hp_...
+hillpost whoami --json      # verify the token before anything else
+```
+
+Set `HILLPOST_API_URL` to point at a non-production Convex deployment.
+
+## Join a hackathon and form a team
+
+```sh
+export HILLPOST_TOKEN=hp_...
+
+H=$(hillpost join ABC123 --json | jq -r .hackathonId)
+
+hillpost team create "Otters" -H "$H" --json
+hillpost team show -H "$H" --json
+```
+
+`hillpost join` returns `{"hackathonId": "...", "alreadyMember": false}`. It is
+safe to repeat: joining twice sets `alreadyMember` to true rather than failing.
+
+To find a hackathon instead of being given a code:
+
+```sh
+hillpost discover --json | jq -r '.[] | "\(._id)\t\(.name)"'
+hillpost join --public jd7abc... --json
+```
+
+## Submit a project
+
+```sh
+hillpost submit -H "$H" --json \
+  --name Riverbed \
+  --description "A river gauge dashboard." \
+  --url https://github.com/otters/riverbed \
+  --deployed https://riverbed.example \
+  --whats-new "Added the map view."
+```
+
+`--name`, `--description` and `--url` are required; without them the command
+fails rather than opening a form. The reply is the saved submission, so read
+`submissionCount` from it to confirm the iteration.
+
+Resubmitting is rate limited by the hackathon's `submissionFrequencyMinutes`.
+Read the gap before retrying rather than polling:
+
+```sh
+WAIT=$(hillpost host show -H "$H" --json | jq -r .submissionFrequencyMinutes)
+```
+
+A submission inside the window fails with
+`Rate limited. Please wait N more minute(s) before submitting again.` and exit 1.
+
+## Host a hackathon
+
+```sh
+H=$(hillpost host create --json \
+  --name "Autumn Jam" \
+  --start 2026-10-03T09:00 --end 2026-10-05T17:00 \
+  --frequency 30 --public | jq -r ._id)
+
+hillpost host categories add "Execution" --max 10 -H "$H" --json
+hillpost host categories add "Creativity" --max 10 -H "$H" --json
+
+hillpost host codes -H "$H" --json
+```
+
+`host codes` returns the competitor and judge codes and their
+`https://hillpost.dev/join/...` links. Hand the judge code to judges, then
+approve them as they arrive:
+
+```sh
+hillpost host members list --role judge --status pending -H "$H" --json |
+  jq -r '.[]._id' |
+  while read -r id; do hillpost host members approve "$id" -H "$H" --json; done
+```
+
+Change settings one flag at a time; only the flags you pass are written:
+
+```sh
+hillpost host settings -H "$H" --scores-visible judges --feedback-visible --json
+```
+
+## Judge submissions
+
+An organizer must approve a judge before scoring works; until then `scores:submit`
+fails with `Only approved judges and organizers can score submissions`.
+
+```sh
+export HILLPOST_TOKEN=hp_...
+H=jd7abc...
+
+hillpost host categories list -H "$H" --json > categories.json
+
+hillpost judge list -H "$H" --json | jq -r '.[]._id' |
+  while read -r submission; do
+    hillpost judge score "$submission" --category Execution --score 8 \
+      --feedback "Works end to end." -H "$H" --json
+    hillpost judge score "$submission" --category Creativity --score 7 \
+      -H "$H" --json
+  done
+```
+
+`judge score` scores one category per call. `--category` takes a category id or
+its name ignoring case, and the score has to run from 1 to that category's
+`maxScore`. Re-running replaces your earlier score for the category.
+
+Read back what you and everyone else gave:
+
+```sh
+hillpost judge scores js9abc... -H "$H" --json
+```
+
+`{"mine": [...], "all": {"scoresHidden": ..., "entries": [...]}}`. When
+`scoresHidden` is true the organizer is holding averages back; that is not an
+error.
+
+## Watch the leaderboard
+
+```sh
+hillpost leaderboard -H "$H" --json | jq -r '.entries[] | "\(.rank) \(.teamName) \(.overallScore)"'
+```
+
+Poll this on your own schedule. Do not use `--watch`, which needs a terminal.
+`leaderboardHidden: true` means the organizer has hidden scores from you.
+
+## Common mistakes
+
+| Mistake | What happens |
+| --- | --- |
+| Omitting `--json` | Styled output with ANSI escapes that is not machine readable. |
+| Omitting `-H` in a non-interactive shell | `No hackathon selected. Run: hillpost use <id\|code>, or pass -H <id>` |
+| Running `hillpost judge` with no subcommand | `hillpost judge needs a terminal, try: hillpost judge list` |
+| `hillpost submit` without `--name --description --url` | `hillpost submit needs ...` instead of a form. |
+| Submitting before creating a team | `you are not on a team yet, run: hillpost team create <name>` |
+| Scoring several categories in one call | Not supported. One `judge score` call per category. |
+| Retrying a rate-limited submission immediately | Fails the same way until the gap has passed. |
+| Parsing numbers as integers | Convex spells numbers as doubles; parse as floats. |

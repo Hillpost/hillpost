@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { mutation, query } from "./_generated/server";
+import { mutation, query } from "./lib/functions";
 import { requireAuthUserId, getAuthUserId } from "./auth";
 
 // Sanitized judge profile fields that are safe to expose on public hackathon pages.

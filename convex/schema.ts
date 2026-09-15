@@ -139,4 +139,28 @@ export default defineSchema({
   })
     .index("by_hackathonId", ["hackathonId"])
     .index("by_hackathonId_order", ["hackathonId", "order"]),
+
+  cliTokens: defineTable({
+    userId: v.string(),
+    userName: v.string(),
+    userImageUrl: v.optional(v.string()),
+    token: v.string(),
+    label: v.string(),
+    createdAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+  })
+    .index("by_token", ["token"])
+    .index("by_userId", ["userId"]),
+
+  cliDevices: defineTable({
+    deviceCode: v.string(),
+    userCode: v.string(),
+    status: v.union(v.literal("pending"), v.literal("approved")),
+    token: v.optional(v.string()),
+    userName: v.optional(v.string()),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_deviceCode", ["deviceCode"])
+    .index("by_userCode", ["userCode"]),
 });
