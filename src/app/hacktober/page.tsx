@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { FooterSection } from "@/components/landing/footer-section";
 
+const REGISTER_URL = "https://luma.com/a3dgd7y4";
+
 export const metadata: Metadata = {
   title: "Hacktober 2026 | Hillpost",
   description:
@@ -84,16 +86,16 @@ export default function HacktoberPage() {
               </div>
 
               <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                <button
-                  type="button"
-                  disabled
-                  aria-disabled="true"
-                  className="flex cursor-not-allowed items-center gap-3 border border-[#555555] bg-[#111111] px-7 py-3.5 text-sm font-bold uppercase tracking-wider text-[#777777] opacity-70"
+                <a
+                  href={REGISTER_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 border border-[#FF6600] bg-[#FF6600] px-7 py-3.5 text-sm font-bold uppercase tracking-wider text-black transition-colors hover:border-white hover:bg-white"
                 >
-                  [ Register · Coming soon ]
-                </button>
+                  [ Register on Luma ]
+                </a>
                 <span className="text-[10px] uppercase tracking-[0.18em] text-[#444444]">
-                  Registration has not opened yet
+                  Free · Registration is open
                 </span>
               </div>
             </div>
@@ -185,16 +187,16 @@ export default function HacktoberPage() {
           <p className="mb-5 text-xs uppercase tracking-[0.2em] text-[#FF6600]">Oct 1—30, 2026</p>
           <h2 className="text-3xl font-bold uppercase sm:text-5xl">Make something worth opening up.</h2>
           <p className="mx-auto mt-5 max-w-xl text-sm leading-6 text-[#777777]">
-            Keep that idea. Registration and full event details are on the way.
+            Grab your spot now. Full event details will follow closer to kickoff.
           </p>
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            className="mt-8 cursor-not-allowed border border-[#555555] bg-[#111111] px-7 py-3.5 text-sm font-bold uppercase tracking-wider text-[#777777] opacity-70"
+          <a
+            href={REGISTER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-8 inline-flex items-center gap-3 border border-[#FF6600] bg-[#FF6600] px-7 py-3.5 text-sm font-bold uppercase tracking-wider text-black transition-colors hover:border-white hover:bg-white"
           >
-            [ Register · Coming soon ]
-          </button>
+            [ Register on Luma ]
+          </a>
         </div>
       </section>
 
