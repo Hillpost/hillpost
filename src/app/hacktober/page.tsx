@@ -12,6 +12,9 @@ import {
 import { FooterSection } from "@/components/landing/footer-section";
 
 const REGISTER_URL = "https://luma.com/a3dgd7y4";
+const SPONSOR_EMAIL = "hacktober@hillpost.dev";
+// Gmail compose opens in a tab instead of handing off to the OS mail app.
+const SPONSOR_COMPOSE_URL = `https://mail.google.com/mail/?view=cm&fs=1&to=${SPONSOR_EMAIL}&su=Hacktober%20sponsorship`;
 
 export const metadata: Metadata = {
   title: "Hacktober 2026 | Hillpost",
@@ -209,13 +212,23 @@ export default function HacktoberPage() {
               bring the community together in San Francisco.
             </p>
           </div>
-          <a
-            href="mailto:hacktober@hillpost.dev?subject=Hacktober%20sponsorship"
-            className="flex w-fit items-center gap-3 border border-[#FF6600] px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-[#FF6600] transition-colors hover:bg-[#FF6600] hover:text-black"
-          >
-            <Mail className="h-4 w-4" />
-            [ Get in touch ]
-          </a>
+          <div className="flex flex-col items-start gap-3">
+            <a
+              href={SPONSOR_COMPOSE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-fit items-center gap-3 border border-[#FF6600] px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-[#FF6600] transition-colors hover:bg-[#FF6600] hover:text-black"
+            >
+              <Mail className="h-4 w-4" />
+              [ Get in touch ]
+            </a>
+            <a
+              href={`mailto:${SPONSOR_EMAIL}?subject=Hacktober%20sponsorship`}
+              className="text-[10px] uppercase tracking-[0.18em] text-[#555555] transition-colors hover:text-white"
+            >
+              or email {SPONSOR_EMAIL}
+            </a>
+          </div>
         </div>
       </section>
 
