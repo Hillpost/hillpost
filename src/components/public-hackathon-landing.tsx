@@ -2,13 +2,20 @@
 
 import { motion } from "framer-motion";
 import { format, differenceInDays, differenceInHours } from "date-fns";
-import { ExternalLink, ArrowRight, Trophy, Zap, Users, Clock } from "lucide-react";
+import { ArrowRight, Trophy, Zap, Users, Clock } from "lucide-react";
 import { SignInButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { isSafeHttpUrl } from "@/lib/url";
 import { useEffect, useState } from "react";
 import type { Id } from "../../convex/_generated/dataModel";
+import {
+  PublicCategoriesSection,
+  PublicJudgesSection,
+  PublicSponsorsSection,
+  type PublicCategory,
+  type PublicJudge,
+  type PublicSponsor,
+} from "@/components/public-hackathon-details";
 
 // ─── Prop types ───────────────────────────────────────────────────────────────
 
@@ -24,29 +31,6 @@ type PublicHackathon = {
   isPublic?: boolean;
   openGraphImageUrl?: string;
   scoresVisible?: boolean | "all" | "judges" | "none";
-};
-
-type PublicCategory = {
-  _id: Id<"categories">;
-  name: string;
-  description: string;
-  maxScore: number;
-};
-
-type PublicSponsor = {
-  _id: Id<"sponsors">;
-  name: string;
-  pfpUrl?: string;
-  bannerUrl?: string;
-  websiteUrl?: string;
-  badgeText?: string;
-  displayStyle?: "featured" | "large" | "medium" | "small";
-};
-
-type PublicJudge = {
-  _id: Id<"hackathonMembers">;
-  userName: string;
-  userImageUrl?: string;
 };
 
 export interface PublicHackathonLandingProps {
@@ -141,18 +125,6 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Wraps sponsor image/name in a link when a safe URL exists
-function MaybeSponsorLink({ sponsor, children, className }: { sponsor: PublicSponsor; children: React.ReactNode; className?: string }) {
-  if (sponsor.websiteUrl && isSafeHttpUrl(sponsor.websiteUrl)) {
-    return (
-      <a href={sponsor.websiteUrl} target="_blank" rel="noopener noreferrer" className={className} aria-label={`${sponsor.name} website`}>
-        {children}
-      </a>
-    );
-  }
-  return <div className={className}>{children}</div>;
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function PublicHackathonLanding({
@@ -174,13 +146,6 @@ export function PublicHackathonLanding({
   const publicRegistrationCloseAt = hackathon.submissionsEndDate ?? hackathon.endDate;
   const isPublicRegistrationOpen = now <= publicRegistrationCloseAt;
   const countdown = getCountdownLabel(hackathon.startDate, hackathon.endDate, status, now);
-  const totalPoints = categories?.reduce((sum, c) => sum + c.maxScore, 0) ?? 0;
-
-  const featuredSponsors = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "featured") ?? [];
-  const largeSponsors   = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "large") ?? [];
-  const mediumSponsors  = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "medium") ?? [];
-  const smallSponsors   = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "small") ?? [];
-
   return (
     <div className="min-h-screen bg-black text-white">
 
@@ -344,205 +309,10 @@ export function PublicHackathonLanding({
               </div>
             </motion.section>
 
-            {/* Judging Criteria */}
-            {categories && categories.length > 0 && (
-              <motion.section
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
-              >
-                <SectionHeading>How you&apos;ll be judged</SectionHeading>
-                {totalPoints > 0 && (
-                  <p className="mb-5 text-xs text-[#555555]">
-                    {totalPoints} total points · {categories.length}{" "}
-                    {categories.length === 1 ? "category" : "categories"}
-                  </p>
-                )}
-                <div className="space-y-3">
-                  {categories.map((cat) => {
-                    const pct = totalPoints > 0 ? Math.round((cat.maxScore / totalPoints) * 100) : 0;
-                    return (
-                      <div key={cat._id} className="border border-[#1F1F1F] bg-[#0A0A0A] p-4">
-                        <div className="mb-3 flex items-center justify-between gap-4">
-                          <p className="text-sm font-bold text-white uppercase tracking-wide">
-                            {cat.name}
-                          </p>
-                          <span className="shrink-0 rounded-sm border border-[#00FF41]/30 bg-[#00FF4108] px-2 py-0.5 text-xs font-bold tabular-nums text-[#00FF41]">
-                            {cat.maxScore} pts
-                          </span>
-                        </div>
-                        {/* Progress bar */}
-                        {totalPoints > 0 && (
-                          <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-[#111111]">
-                            <div
-                              className="h-full rounded-full bg-[#00FF41] transition-all duration-700"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        )}
-                        {cat.description && (
-                          <p className="text-xs text-[#666666] leading-relaxed whitespace-pre-wrap break-words">
-                            {cat.description}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </motion.section>
-            )}
+            <PublicCategoriesSection categories={categories} />
+            <PublicJudgesSection judges={publicJudges} />
 
-            {/* Judges */}
-            {publicJudges && publicJudges.length > 0 && (
-              <motion.section
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.25 }}
-              >
-                <SectionHeading>Judges</SectionHeading>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                  {publicJudges.map((judge) => (
-                    <div key={judge._id} className="flex flex-col items-center gap-3 py-5 px-3 border border-[#1F1F1F] bg-[#0A0A0A] text-center">
-                      {judge.userImageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={judge.userImageUrl}
-                          alt={judge.userName}
-                          className="h-16 w-16 rounded-full border border-[#1F1F1F] object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[#1F1F1F] text-xl font-bold text-[#555555] uppercase">
-                          {judge.userName[0] ?? "?"}
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-xs font-bold text-white uppercase tracking-wide leading-snug">
-                          {judge.userName}
-                        </p>
-                        <p className="mt-0.5 text-[10px] text-[#555555] uppercase tracking-widest">
-                          Judge
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.section>
-            )}
-
-            {/* Sponsors */}
-            {sponsors && sponsors.length > 0 && (
-              <motion.section
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.3 }}
-              >
-                <SectionHeading>Sponsors</SectionHeading>
-                <div className="space-y-8">
-                  {/* Featured */}
-                  {featuredSponsors.length > 0 && (
-                    <div className="space-y-4">
-                      {featuredSponsors.map((s) => (
-                        <div key={s._id} className="group">
-                          <MaybeSponsorLink sponsor={s} className="block">
-                            {s.bannerUrl ? (
-                              <div className="relative overflow-hidden border border-[#1F1F1F] bg-[#111111]">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={s.bannerUrl} alt={`${s.name} banner`} className="h-40 w-full object-cover" />
-                                {s.pfpUrl && (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={s.pfpUrl} alt={s.name} className="absolute bottom-3 left-4 h-14 w-14 rounded-full border-2 border-black object-cover" />
-                                )}
-                              </div>
-                            ) : s.pfpUrl ? (
-                              <div className="flex h-36 items-center justify-center border border-[#1F1F1F] bg-[#111111]">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={s.pfpUrl} alt={s.name} className="h-20 w-20 rounded-full border border-[#1F1F1F] object-cover" />
-                              </div>
-                            ) : null}
-                          </MaybeSponsorLink>
-                          <SponsorNameRow sponsor={s} size="lg" />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {/* Large */}
-                  {largeSponsors.length > 0 && (
-                    <div className="flex flex-wrap gap-5">
-                      {largeSponsors.map((s) => (
-                        <div key={s._id} className="group w-64 max-w-full min-w-0 overflow-hidden">
-                          <MaybeSponsorLink sponsor={s} className="block">
-                            {s.bannerUrl ? (
-                              <div className="relative overflow-hidden border border-[#1F1F1F] bg-[#111111]">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={s.bannerUrl} alt={`${s.name} banner`} className="h-28 w-full object-cover" />
-                                {s.pfpUrl && (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={s.pfpUrl} alt={s.name} className="absolute bottom-2 left-2 h-12 w-12 rounded-full border-2 border-black object-cover" />
-                                )}
-                              </div>
-                            ) : s.pfpUrl ? (
-                              <div className="flex h-28 items-center justify-center border border-[#1F1F1F] bg-[#111111]">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={s.pfpUrl} alt={s.name} className="h-16 w-16 rounded-full border border-[#1F1F1F] object-cover" />
-                              </div>
-                            ) : null}
-                          </MaybeSponsorLink>
-                          <SponsorNameRow sponsor={s} size="md" />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {/* Medium */}
-                  {mediumSponsors.length > 0 && (
-                    <div className="flex flex-wrap gap-4">
-                      {mediumSponsors.map((s) => (
-                        <div key={s._id} className="group w-44 max-w-full min-w-0 overflow-hidden">
-                          <MaybeSponsorLink sponsor={s} className="block">
-                            {s.bannerUrl ? (
-                              <div className="relative overflow-hidden border border-[#1F1F1F] bg-[#111111]">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={s.bannerUrl} alt={`${s.name} banner`} className="h-20 w-full object-cover" />
-                                {s.pfpUrl && (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={s.pfpUrl} alt={s.name} className="absolute bottom-1 left-2 h-8 w-8 rounded-full border-2 border-black object-cover" />
-                                )}
-                              </div>
-                            ) : s.pfpUrl ? (
-                              <div className="flex h-20 items-center justify-center border border-[#1F1F1F] bg-[#111111]">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={s.pfpUrl} alt={s.name} className="h-12 w-12 rounded-full border border-[#1F1F1F] object-cover" />
-                              </div>
-                            ) : null}
-                          </MaybeSponsorLink>
-                          <SponsorNameRow sponsor={s} size="sm" />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {/* Small */}
-                  {smallSponsors.length > 0 && (
-                    <div className="flex flex-wrap gap-5 items-center">
-                      {smallSponsors.map((s) => (
-                        <div key={s._id} className="group flex flex-col items-center gap-2">
-                          {s.pfpUrl && (
-                            s.websiteUrl && isSafeHttpUrl(s.websiteUrl) ? (
-                              <a href={s.websiteUrl} target="_blank" rel="noopener noreferrer">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={s.pfpUrl} alt={s.name} className="h-12 w-12 rounded-full border border-[#1F1F1F] object-cover" />
-                              </a>
-                            ) : (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={s.pfpUrl} alt={s.name} className="h-12 w-12 rounded-full border border-[#1F1F1F] object-cover" />
-                            )
-                          )}
-                          <SponsorNameRow sponsor={s} size="sm" />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </motion.section>
-            )}
+            <PublicSponsorsSection sponsors={sponsors} />
 
           </div>{/* end main column */}
 
@@ -681,23 +451,4 @@ function StatRow({ icon, label, children }: { icon: React.ReactNode; label: stri
       </div>
     </div>
   );
-}
-
-function SponsorNameRow({ sponsor, size }: { sponsor: PublicSponsor; size: "lg" | "md" | "sm" }) {
-  const textClass = size === "lg" ? "text-base font-bold" : size === "md" ? "text-sm font-bold" : "text-xs font-bold";
-  const nameEl = (
-    <span className={cn("flex items-center gap-1 text-white uppercase tracking-wide group-hover:text-[#00B4FF] transition-colors", textClass)}>
-      {sponsor.name}
-      {sponsor.badgeText && (
-        <span className="tui-badge border-[#00B4FF] text-[#00B4FF]">{sponsor.badgeText}</span>
-      )}
-      {sponsor.websiteUrl && isSafeHttpUrl(sponsor.websiteUrl) && (
-        <ExternalLink className="h-3 w-3 opacity-50" />
-      )}
-    </span>
-  );
-  // Render as a non-interactive div — the MaybeSponsorLink above the image
-  // already provides the accessible link; duplicating as another <a> would
-  // create redundant tab stops for screen readers.
-  return <div className="mt-2">{nameEl}</div>;
 }

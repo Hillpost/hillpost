@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { FooterSection } from "@/components/landing/footer-section";
 import { HacktoberRegisterButton } from "@/components/hacktober-register-button";
+import { HacktoberEventDetails } from "@/components/hacktober-event-details";
 import type { Id } from "../../../convex/_generated/dataModel";
 
 const LUMA_URL = "https://luma.com/a3dgd7y4";
@@ -185,6 +186,8 @@ export default function HacktoberPage() {
           </ol>
         </div>
       </section>
+
+      <HacktoberEventDetails hackathonId={HACKTOBER_ID} />
 
       <section className="px-4 pb-10 pt-20 sm:px-6 lg:px-8 lg:pb-14 lg:pt-28">
         <div className="mx-auto max-w-4xl border border-[#1F1F1F] bg-[#0A0A0A] px-6 py-12 text-center sm:px-12 sm:py-16">
