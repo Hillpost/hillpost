@@ -61,17 +61,19 @@ export function PublicCategoriesSection({
           {categories.length === 1 ? "category" : "categories"}
         </p>
       )}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {categories.map((category, index) => {
-          const isLastOddCategory =
-            categories.length % 2 === 1 && index === categories.length - 1;
+      <div className="flex flex-wrap items-start gap-3">
+        {categories.map((category) => {
+          const needsMoreSpace =
+            category.description.trim().length > 0 || category.name.length > 22;
 
           return (
             <div
               key={category._id}
               className={cn(
-                "h-full border border-[#1F1F1F] bg-[#0A0A0A] p-4",
-                isLastOddCategory && "sm:col-span-2 xl:col-span-1",
+                "w-full min-w-0 border border-[#1F1F1F] bg-[#0A0A0A] p-4 sm:min-w-64",
+                needsMoreSpace
+                  ? "sm:flex-[2_1_36%]"
+                  : "sm:flex-[1_1_18%]",
               )}
             >
               <div className="mb-3 flex items-center justify-between gap-4">
