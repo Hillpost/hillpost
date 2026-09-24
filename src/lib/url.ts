@@ -6,3 +6,12 @@ export function isSafeHttpUrl(url: string): boolean {
     return false;
   }
 }
+
+export function isSafeRedirectUrl(url: string): boolean {
+  const trimmedUrl = url.trim();
+  if (trimmedUrl.startsWith("/") && !trimmedUrl.startsWith("//")) {
+    return trimmedUrl !== "/";
+  }
+
+  return isSafeHttpUrl(trimmedUrl);
+}

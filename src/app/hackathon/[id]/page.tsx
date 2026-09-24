@@ -37,7 +37,7 @@ import {
   type RegistrationAnswerState,
 } from "@/lib/registration";
 
-import { isSafeHttpUrl } from "@/lib/url";
+import { isSafeHttpUrl, isSafeRedirectUrl } from "@/lib/url";
 
 const ALL_TABS = ["overview", "submissions", "compete", "judge", "manage"] as const;
 type Tab = (typeof ALL_TABS)[number];
@@ -66,13 +66,23 @@ export default function HackathonDetailPage() {
   const hackathon = useQuery(api.hackathons.get, { hackathonId });
   const membership = useQuery(api.members.getMyMembership, { hackathonId });
   const role = membership?.role;
-  const showPublicLanding = hackathon?.isPublic === true && !role;
+  const isPublicVisitor = hackathon?.isPublic === true && !role;
+  const showPublicLanding = isPublicVisitor && hackathon.hidePublicPage !== true;
+  const hidePublicLanding = isPublicVisitor && hackathon.hidePublicPage === true;
+  const publicPageUrl = hackathon?.publicPageUrl?.trim();
+  const publicPageRedirectUrl =
+    hidePublicLanding &&
+    publicPageUrl &&
+    publicPageUrl !== `/hackathon/${hackathonId}` &&
+    isSafeRedirectUrl(publicPageUrl)
+      ? publicPageUrl
+      : null;
   const publicJudges = useQuery(api.members.listPublicJudges, { hackathonId });
 
-  const submissions = useQuery(api.submissions.list, showPublicLanding ? "skip" : { hackathonId });
+  const submissions = useQuery(api.submissions.list, isPublicVisitor ? "skip" : { hackathonId });
   const allMembers = useQuery(api.members.listMembers, role === "organizer" ? { hackathonId } : "skip");
   const categories = useQuery(api.categories.list, { hackathonId });
-  const tracks = useQuery(api.tracks.list, showPublicLanding ? "skip" : { hackathonId });
+  const tracks = useQuery(api.tracks.list, isPublicVisitor ? "skip" : { hackathonId });
   const sponsors = useQuery(api.sponsors.list, { hackathonId });
   const featuredSponsors = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "featured") ?? [];
   const largeSponsors = sponsors?.filter((s) => (s.displayStyle ?? "medium") === "large") ?? [];
@@ -109,6 +119,12 @@ export default function HackathonDetailPage() {
       }).catch(console.error);
     }
   }, [isAuthenticated, user?.imageUrl, membership, hackathonId, syncProfile]);
+
+  React.useEffect(() => {
+    if (publicPageRedirectUrl) {
+      window.location.replace(publicPageRedirectUrl);
+    }
+  }, [publicPageRedirectUrl]);
 
   // No useEffect redirect — private hackathons return null from the backend for
   // unauthenticated callers (hackathons.get), so the render gate below handles it.
@@ -272,6 +288,35 @@ export default function HackathonDetailPage() {
           >
             <ArrowLeft className="h-3 w-3" />
             Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (hidePublicLanding) {
+    if (publicPageRedirectUrl) {
+      return (
+        <div className="mx-auto max-w-5xl px-4 py-8">
+          <div className="h-64 border border-[#1F1F1F] bg-[#0A0A0A] flex items-center justify-center">
+            <span className="text-xs text-[#555555] uppercase tracking-widest">
+              ▓▓▓░░░ REDIRECTING...
+            </span>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mx-auto max-w-5xl px-4 py-8">
+        <div className="border border-[#1F1F1F] bg-[#0A0A0A] p-8 text-center">
+          <p className="text-sm text-[#555555] uppercase tracking-wide">Hackathon not found</p>
+          <Link
+            href="/"
+            className="mt-4 inline-flex items-center gap-2 text-xs text-[#555555] uppercase tracking-wider hover:text-white transition-colors"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back to Home
           </Link>
         </div>
       </div>

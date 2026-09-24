@@ -46,6 +46,8 @@ interface OrganizerPanelProps {
     submissionFrequencyMinutes: number;
     openGraphImageUrl?: string;
     isPublic?: boolean;
+    hidePublicPage?: boolean;
+    publicPageUrl?: string;
     feedbackVisible?: boolean;
     scoresVisible?: boolean | "all" | "judges" | "none";
     registrationFields?: RegistrationField[];
@@ -359,7 +361,9 @@ function HackathonInfoSection({
 
   const copyPublicLink = async () => {
     try {
-      const link = `${window.location.origin}/hackathon/${hackathonId}`;
+      const link =
+        hackathon.publicPageUrl?.trim() ||
+        `${window.location.origin}/hackathon/${hackathonId}`;
       await navigator.clipboard.writeText(link);
       setCopiedPublicLink(true);
       toast.success("Public link copied!");
@@ -906,7 +910,10 @@ function HackathonInfoSection({
               <label className="text-xs font-bold text-[#555555] uppercase tracking-widest">PUBLIC LINK:</label>
               <div className="mt-1.5 flex items-center gap-2">
                 <code className="flex-1 truncate border border-[#1F1F1F] bg-black px-3 py-1.5 text-xs text-[#00FF41] tracking-wider">
-                  {typeof window !== "undefined" ? `${window.location.origin}/hackathon/${hackathonId}` : `…/hackathon/${hackathonId}`}
+                  {hackathon.publicPageUrl?.trim() ||
+                    (typeof window !== "undefined"
+                      ? `${window.location.origin}/hackathon/${hackathonId}`
+                      : `…/hackathon/${hackathonId}`)}
                 </code>
                 <button
                   onClick={copyPublicLink}
