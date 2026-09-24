@@ -1,6 +1,20 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+const registrationField = v.object({
+  id: v.string(),
+  label: v.string(),
+  type: v.union(v.literal("text"), v.literal("checkbox")),
+  required: v.boolean(),
+});
+
+const registrationAnswer = v.object({
+  fieldId: v.string(),
+  label: v.string(),
+  type: v.union(v.literal("text"), v.literal("checkbox")),
+  value: v.union(v.string(), v.boolean()),
+});
+
 export default defineSchema({
   hackathons: defineTable({
     name: v.string(),
@@ -18,6 +32,7 @@ export default defineSchema({
     isPublic: v.optional(v.boolean()),
     feedbackVisible: v.optional(v.boolean()),
     scoresVisible: v.optional(v.union(v.boolean(), v.literal("all"), v.literal("judges"), v.literal("none"))),
+    registrationFields: v.optional(v.array(registrationField)),
     createdAt: v.number(),
   })
     .index("by_competitorJoinCode", ["competitorJoinCode"])
@@ -37,6 +52,7 @@ export default defineSchema({
     ),
     teamId: v.optional(v.id("teams")),
     status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+    registrationAnswers: v.optional(v.array(registrationAnswer)),
     joinedAt: v.number(),
   })
     .index("by_hackathonId", ["hackathonId"])

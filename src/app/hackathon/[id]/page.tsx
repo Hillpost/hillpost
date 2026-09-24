@@ -6,7 +6,6 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import { useParams, useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
-import { useDisplayNamePrompt } from "@/components/display-name-prompt";
 import React, { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -30,6 +29,13 @@ import { JudgePanel } from "@/components/judge-panel";
 import { PublicSubmissions } from "@/components/public-submissions";
 import { QrCodeButton } from "@/components/qr-code-overlay";
 import { PublicHackathonLanding } from "@/components/public-hackathon-landing";
+import { RegistrationFieldsForm } from "@/components/registration-fields-form";
+import { getClerkDisplayName } from "@/lib/clerk-user";
+import {
+  serializeRegistrationAnswers,
+  validateRegistrationAnswers,
+  type RegistrationAnswerState,
+} from "@/lib/registration";
 
 import { isSafeHttpUrl } from "@/lib/url";
 
@@ -80,9 +86,13 @@ export default function HackathonDetailPage() {
   const pathname = usePathname();
   const [isLeaving, setIsLeaving] = useState(false);
   const [isJoiningPublic, setIsJoiningPublic] = useState(false);
+  const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
+  const [registrationAnswers, setRegistrationAnswers] = useState<RegistrationAnswerState>({});
   const [now, setNow] = useState(() => Date.now());
   const userId = user?.id;
-  const { requestDisplayName, displayNamePrompt } = useDisplayNamePrompt();
+  const [registrationDisplayName, setRegistrationDisplayName] = useState<string>();
+  const resolvedRegistrationDisplayName =
+    registrationDisplayName ?? getClerkDisplayName(user) ?? "";
 
   React.useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), ONE_MINUTE_MS);
@@ -187,8 +197,22 @@ export default function HackathonDetailPage() {
       return;
     }
 
-    const userName = await requestDisplayName(user, { confirm: true });
+    const registrationFields = hackathon?.registrationFields ?? [];
+    if (!isRegistrationOpen) {
+      setIsRegistrationOpen(true);
+      return;
+    }
+    const userName = resolvedRegistrationDisplayName.trim();
     if (!userName) {
+      toast.error("Please enter your name");
+      return;
+    }
+    const registrationError = validateRegistrationAnswers(
+      registrationFields,
+      registrationAnswers
+    );
+    if (registrationError) {
+      toast.error(registrationError);
       return;
     }
 
@@ -198,12 +222,19 @@ export default function HackathonDetailPage() {
         hackathonId,
         userName,
         userImageUrl: user?.imageUrl,
+        registrationAnswers: serializeRegistrationAnswers(
+          registrationFields,
+          registrationAnswers
+        ),
       });
       if (result.alreadyMember) {
         toast.info("You're already a member — redirecting...");
       } else {
         toast.success("Successfully joined the hackathon!");
       }
+      setIsRegistrationOpen(false);
+      setRegistrationDisplayName(undefined);
+      setRegistrationAnswers({});
       router.push(`/hackathon/${result.hackathonId}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to join hackathon";
@@ -261,7 +292,50 @@ export default function HackathonDetailPage() {
           isJoining={isJoiningPublic}
           onJoin={handlePublicJoin}
         />
-        {displayNamePrompt}
+        {isRegistrationOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/80"
+              onClick={() => setIsRegistrationOpen(false)}
+              aria-label="Close registration form"
+            />
+            <div className="relative z-10 max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto border border-[#1F1F1F] bg-[#0A0A0A] p-6 shadow-2xl">
+              <div className="mb-2 text-xs text-[#555555] uppercase tracking-widest">
+                ── REGISTRATION
+              </div>
+              <h2 className="text-lg font-bold text-white uppercase tracking-wide">
+                {hackathon.name}
+              </h2>
+              <RegistrationFieldsForm
+                displayName={resolvedRegistrationDisplayName}
+                onDisplayNameChange={setRegistrationDisplayName}
+                fields={hackathon.registrationFields ?? []}
+                answers={registrationAnswers}
+                onChange={setRegistrationAnswers}
+                disabled={isJoiningPublic}
+              />
+              <div className="mt-5 flex justify-end gap-3 border-t border-[#1F1F1F] pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsRegistrationOpen(false)}
+                  disabled={isJoiningPublic}
+                  className="border border-[#1F1F1F] px-4 py-2 text-xs text-[#555555] uppercase tracking-wider transition-colors hover:border-white hover:text-white disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePublicJoin}
+                  disabled={isJoiningPublic}
+                  className="bg-[#00FF41] px-4 py-2 text-xs font-bold text-black uppercase tracking-wider transition-colors hover:bg-white disabled:opacity-50"
+                >
+                  {isJoiningPublic ? "Registering..." : "[ Register ]"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     );
   }
@@ -883,7 +957,6 @@ export default function HackathonDetailPage() {
       {activeTab === "judge" && (
         <JudgePanel hackathonId={hackathonId} hackathon={hackathon} />
       )}
-      {displayNamePrompt}
     </div>
   );
 }
