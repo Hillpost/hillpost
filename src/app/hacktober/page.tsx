@@ -15,7 +15,7 @@ import { HacktoberEventDetails } from "@/components/hacktober-event-details";
 import type { Id } from "../../../convex/_generated/dataModel";
 
 const LUMA_URL = "https://luma.com/a3dgd7y4";
-const HACKTOBER_ID = "jd72bd7yrpdbm25vmqd4ty500986jcsh" as Id<"hackathons">;
+const HACKTOBER_ID = "jd7fwr6hahegq95tjw6x7a72098e0qer" as Id<"hackathons">;
 
 export const metadata: Metadata = {
   title: "Hacktober 2026 | Hillpost",
