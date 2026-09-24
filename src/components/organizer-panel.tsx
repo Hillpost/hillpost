@@ -28,6 +28,7 @@ import {
 import { QrCodeButton } from "@/components/qr-code-overlay";
 import { PanelSkeleton, SectionSkeleton } from "@/components/skeleton";
 import { formatDateTimeForInput, parseDateTimeInputToTimestamp } from "@/lib/date-input";
+import type { RegistrationField, RegistrationFieldType } from "@/lib/registration";
 
 interface OrganizerPanelProps {
   hackathonId: Id<"hackathons">;
@@ -47,6 +48,7 @@ interface OrganizerPanelProps {
     isPublic?: boolean;
     feedbackVisible?: boolean;
     scoresVisible?: boolean | "all" | "judges" | "none";
+    registrationFields?: RegistrationField[];
   };
 }
 
@@ -78,12 +80,185 @@ export function OrganizerPanel({
   return (
     <div className="space-y-4">
       <HackathonInfoSection hackathonId={hackathonId} hackathon={hackathon} />
+      <RegistrationFieldsSection
+        hackathonId={hackathonId}
+        fields={hackathon.registrationFields ?? []}
+      />
       <PendingApprovalsSection hackathonId={hackathonId} />
       <CategoriesSection hackathonId={hackathonId} />
       <TracksSection hackathonId={hackathonId} />
       <SponsorsSection hackathonId={hackathonId} />
       <TeamsAndProjectsSection hackathonId={hackathonId} />
       <MembersSection hackathonId={hackathonId} />
+    </div>
+  );
+}
+
+function RegistrationFieldsSection({
+  hackathonId,
+  fields,
+}: {
+  hackathonId: Id<"hackathons">;
+  fields: RegistrationField[];
+}) {
+  const updateHackathon = useMutation(api.hackathons.update);
+  const [label, setLabel] = useState("");
+  const [type, setType] = useState<RegistrationFieldType>("text");
+  const [required, setRequired] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const saveFields = async (nextFields: RegistrationField[], message: string) => {
+    setIsSaving(true);
+    try {
+      await updateHackathon({ hackathonId, registrationFields: nextFields });
+      toast.success(message);
+      return true;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update registration form");
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAdd = async (event: FormEvent) => {
+    event.preventDefault();
+    const trimmedLabel = label.trim();
+    if (!trimmedLabel) {
+      toast.error("Enter a field label");
+      return;
+    }
+    if (fields.length >= 20) {
+      toast.error("Registration forms can have at most 20 fields");
+      return;
+    }
+
+    const id = crypto.randomUUID();
+    const didSave = await saveFields(
+      [...fields, { id, label: trimmedLabel, type, required }],
+      "Registration field added"
+    );
+    if (!didSave) return;
+    setLabel("");
+    setType("text");
+    setRequired(false);
+  };
+
+  const toggleRequired = (fieldId: string) => {
+    const nextFields = fields.map((field) =>
+      field.id === fieldId ? { ...field, required: !field.required } : field
+    );
+    void saveFields(nextFields, "Registration field updated");
+  };
+
+  const removeField = (fieldId: string) => {
+    void saveFields(
+      fields.filter((field) => field.id !== fieldId),
+      "Registration field removed"
+    );
+  };
+
+  return (
+    <div className="border border-[#1F1F1F] bg-[#0A0A0A] p-5">
+      {sectionHeader("REGISTRATION FORM")}
+      <p className="mb-4 text-xs text-[#555555]">
+        Ask competitors and judges for a little more information when they join.
+      </p>
+
+      {fields.length > 0 && (
+        <div className="mb-4 space-y-2">
+          {fields.map((field) => (
+            <div
+              key={field.id}
+              className="flex flex-col gap-2 border border-[#1F1F1F] bg-black px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm text-white">{field.label}</p>
+                <p className="mt-0.5 text-[10px] text-[#555555] uppercase tracking-widest">
+                  {field.type === "text" ? "Text field" : "Checkbox"}
+                  {field.required ? " · Required" : " · Optional"}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleRequired(field.id)}
+                  disabled={isSaving}
+                  className={cn(
+                    "border px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50",
+                    field.required
+                      ? "border-[#FF6600] text-[#FF6600]"
+                      : "border-[#1F1F1F] text-[#555555] hover:border-white hover:text-white"
+                  )}
+                >
+                  {field.required ? "Required" : "Optional"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeField(field.id)}
+                  disabled={isSaving}
+                  className="p-1.5 text-[#555555] transition-colors hover:text-red-400 disabled:opacity-50"
+                  title="Remove registration field"
+                  aria-label={`Remove ${field.label}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <form onSubmit={handleAdd} className="space-y-3 border-t border-[#1F1F1F] pt-4">
+        <div>
+          <label className="mb-1.5 block text-xs font-bold text-[#555555] uppercase tracking-widest">
+            Question or agreement
+          </label>
+          <input
+            type="text"
+            value={label}
+            onChange={(event) => setLabel(event.target.value)}
+            maxLength={120}
+            placeholder="e.g. What school do you attend?"
+            className="tui-input"
+          />
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex gap-2">
+            {(["text", "checkbox"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setType(option)}
+                className={cn(
+                  "border px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors",
+                  type === option
+                    ? "border-[#00B4FF] bg-[#00B4FF]/10 text-[#00B4FF]"
+                    : "border-[#1F1F1F] text-[#555555] hover:border-white hover:text-white"
+                )}
+              >
+                {option === "text" ? "Text field" : "Checkbox"}
+              </button>
+            ))}
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-[#555555] uppercase tracking-wider">
+            <input
+              type="checkbox"
+              checked={required}
+              onChange={(event) => setRequired(event.target.checked)}
+              className="h-4 w-4 accent-[#00FF41]"
+            />
+            Required
+          </label>
+        </div>
+        <button
+          type="submit"
+          disabled={isSaving || !label.trim()}
+          className="border border-[#00B4FF] px-4 py-2 text-xs font-bold text-[#00B4FF] uppercase tracking-wider transition-colors hover:bg-[#00B4FF] hover:text-black disabled:opacity-50"
+        >
+          {isSaving ? "[ SAVING... ]" : "[ ADD FIELD ]"}
+        </button>
+      </form>
     </div>
   );
 }
@@ -1086,6 +1261,43 @@ function TracksSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
   );
 }
 
+function RegistrationAnswers({
+  answers,
+}: {
+  answers?: Array<{
+    fieldId: string;
+    label: string;
+    type: "text" | "checkbox";
+    value: string | boolean;
+  }>;
+}) {
+  if (!answers || answers.length === 0) return null;
+
+  return (
+    <details className="mt-2 text-xs">
+      <summary className="cursor-pointer text-[10px] font-bold text-[#00B4FF] uppercase tracking-widest">
+        Registration answers ({answers.length})
+      </summary>
+      <dl className="mt-2 divide-y divide-[#1F1F1F] border-l border-[#1F1F1F] pl-3">
+        {answers.map((answer) => (
+          <div key={answer.fieldId} className="py-2 first:pt-0 last:pb-0">
+            <dt className="text-xs text-[#555555]">
+              {answer.label}
+            </dt>
+            <dd className="mt-0.5 whitespace-pre-wrap break-words text-white">
+              {answer.type === "checkbox"
+                ? answer.value === true
+                  ? "Yes"
+                  : "No"
+                : String(answer.value) || "—"}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </details>
+  );
+}
+
 function PendingApprovalsSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
   const members = useQuery(api.members.listMembers, { hackathonId });
   const updateStatus = useMutation(api.members.updateStatus);
@@ -1114,9 +1326,12 @@ function PendingApprovalsSection({ hackathonId }: { hackathonId: Id<"hackathons"
       <div className="space-y-2">
         {pendingMembers.map((member) => (
           <div key={member._id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border border-[#FF6600]/20 bg-black px-4 py-3">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-bold text-white">{member.userName}</span>
-              <span className="tui-badge border-[#00B4FF] text-[#00B4FF]">{member.role.toUpperCase()}</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold text-white">{member.userName}</span>
+                <span className="tui-badge border-[#00B4FF] text-[#00B4FF]">{member.role.toUpperCase()}</span>
+              </div>
+              <RegistrationAnswers answers={member.registrationAnswers} />
             </div>
             <div className="flex gap-2">
               <button
@@ -1217,8 +1432,9 @@ function MembersSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
           {members.map((member) => {
             if (member.status === "pending") return null;
             return (
-              <div key={member._id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border border-[#1F1F1F] bg-[#111111] px-3 py-2">
-                <div className="flex items-center gap-3 min-w-0">
+              <div key={member._id} className="border border-[#1F1F1F] bg-[#111111] px-3 py-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
                   {editingName === member._id ? (
                     <input
                       value={nameDraft}
@@ -1245,8 +1461,8 @@ function MembersSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
                   {member.status === "rejected" && (
                     <span className="tui-badge shrink-0 border-red-500/50 text-red-400">REJECTED</span>
                   )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
                   {editingName === member._id ? (
                     <>
                       <button onClick={() => handleNameUpdate(member._id)} className="p-1.5 text-[#555555] hover:text-[#00FF41] transition-colors" title="Save name">
@@ -1279,7 +1495,9 @@ function MembersSection({ hackathonId }: { hackathonId: Id<"hackathons"> }) {
                       </button>
                     </>
                   )}
+                  </div>
                 </div>
+                <RegistrationAnswers answers={member.registrationAnswers} />
               </div>
             );
           })}

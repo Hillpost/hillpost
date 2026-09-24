@@ -279,6 +279,12 @@ body {
   color: var(--t-accent) !important;
 }
 
+/* Keep the join action label consistent across runtime themes. */
+.join-confirm-button:hover,
+[data-theme="light"] .join-confirm-button:hover {
+  color: #ffffff !important;
+}
+
 [data-theme="light"] .hover\:bg-\[\#00FF41\]:hover {
   background-color: var(--t-accent) !important;
 }

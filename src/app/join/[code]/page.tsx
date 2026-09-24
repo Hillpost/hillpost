@@ -10,7 +10,13 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar, ArrowLeft, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { useDisplayNamePrompt } from "@/components/display-name-prompt";
+import { RegistrationFieldsForm } from "@/components/registration-fields-form";
+import { getClerkDisplayName } from "@/lib/clerk-user";
+import {
+  serializeRegistrationAnswers,
+  validateRegistrationAnswers,
+  type RegistrationAnswerState,
+} from "@/lib/registration";
 
 export default function JoinByLinkPage() {
   const params = useParams();
@@ -27,7 +33,9 @@ export default function JoinByLinkPage() {
   const joinHackathon = useMutation(api.hackathons.join);
 
   const [isJoining, setIsJoining] = useState(false);
-  const { requestDisplayName, displayNamePrompt } = useDisplayNamePrompt();
+  const [displayName, setDisplayName] = useState<string>();
+  const [registrationAnswers, setRegistrationAnswers] = useState<RegistrationAnswerState>({});
+  const resolvedDisplayName = displayName ?? getClerkDisplayName(user) ?? "";
 
   const isMembershipLoading =
     hackathon !== undefined && hackathon !== null && isAuthenticated && membership === undefined;
@@ -73,8 +81,18 @@ export default function JoinByLinkPage() {
       toast.error("Please sign in first");
       return;
     }
-    const userName = await requestDisplayName(user, { confirm: true });
+    const userName = resolvedDisplayName.trim();
     if (!userName) {
+      toast.error("Please enter your name");
+      return;
+    }
+    const registrationFields = hackathon.registrationFields ?? [];
+    const registrationError = validateRegistrationAnswers(
+      registrationFields,
+      registrationAnswers
+    );
+    if (registrationError) {
+      toast.error(registrationError);
       return;
     }
     setIsJoining(true);
@@ -83,6 +101,10 @@ export default function JoinByLinkPage() {
         joinCode,
         userName,
         userImageUrl: user?.imageUrl,
+        registrationAnswers: serializeRegistrationAnswers(
+          registrationFields,
+          registrationAnswers
+        ),
       });
       if (result.alreadyMember) {
         toast.info("You're already a member — redirecting...");
@@ -172,18 +194,27 @@ export default function JoinByLinkPage() {
           )}
         </div>
 
-        <div className="flex flex-col gap-3">
+        <RegistrationFieldsForm
+          displayName={resolvedDisplayName}
+          onDisplayNameChange={setDisplayName}
+          fields={hackathon.registrationFields ?? []}
+          answers={registrationAnswers}
+          onChange={setRegistrationAnswers}
+          disabled={isJoining}
+        />
+
+        <div className="mt-6 flex flex-col gap-3">
           <button
             onClick={handleJoin}
             disabled={isJoining || !!isMembershipLoading}
             className={cn(
-              "flex w-full items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50",
+              "join-confirm-button flex w-full items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50",
               isCompetitorCode
-                ? "border border-[#00FF41] text-[#00FF41] hover:bg-[#00FF41] hover:text-black"
-                : "border border-[#00B4FF] text-[#00B4FF] hover:bg-[#00B4FF] hover:text-black"
+                ? "border border-[#00FF41] text-[#00FF41] hover:bg-[#00FF41]"
+                : "border border-[#00B4FF] text-[#00B4FF] hover:bg-[#00B4FF]"
             )}
           >
-            {isJoining ? "JOINING..." : "[ CONFIRM JOIN → ]"}
+            {isJoining ? "JOINING..." : "JOIN"}
           </button>
           <Link
             href="/dashboard"
@@ -194,7 +225,6 @@ export default function JoinByLinkPage() {
         </div>
         </div>
       </div>
-      {displayNamePrompt}
     </>
   );
 }

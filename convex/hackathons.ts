@@ -4,6 +4,108 @@ import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireAuthUserId, getAuthUserId, getAuthUserName } from "./auth";
 
+const registrationFieldValidator = v.object({
+  id: v.string(),
+  label: v.string(),
+  type: v.union(v.literal("text"), v.literal("checkbox")),
+  required: v.boolean(),
+});
+
+const registrationAnswerInputValidator = v.object({
+  fieldId: v.string(),
+  value: v.union(v.string(), v.boolean()),
+});
+
+type RegistrationField = {
+  id: string;
+  label: string;
+  type: "text" | "checkbox";
+  required: boolean;
+};
+
+type RegistrationAnswerInput = {
+  fieldId: string;
+  value: string | boolean;
+};
+
+function validateRegistrationFields(fields: RegistrationField[]): RegistrationField[] {
+  if (fields.length > 20) {
+    throw new Error("Registration forms can have at most 20 fields");
+  }
+
+  const ids = new Set<string>();
+  return fields.map((field) => {
+    const id = field.id.trim();
+    const label = field.label.trim();
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) {
+      throw new Error("Registration field IDs must be 1-64 letters, numbers, dashes, or underscores");
+    }
+    if (ids.has(id)) {
+      throw new Error("Registration field IDs must be unique");
+    }
+    if (!label || label.length > 120) {
+      throw new Error("Registration field labels must be 1-120 characters");
+    }
+    ids.add(id);
+    return { ...field, id, label };
+  });
+}
+
+function validateRegistrationAnswers(
+  fields: RegistrationField[] | undefined,
+  answers: RegistrationAnswerInput[] | undefined
+) {
+  const configuredFields = fields ?? [];
+  const providedAnswers = answers ?? [];
+  const answersByField = new Map<string, string | boolean>();
+
+  for (const answer of providedAnswers) {
+    if (answersByField.has(answer.fieldId)) {
+      throw new Error("Each registration field may only be answered once");
+    }
+    if (!configuredFields.some((field) => field.id === answer.fieldId)) {
+      throw new Error("Registration form changed. Please refresh and try again");
+    }
+    answersByField.set(answer.fieldId, answer.value);
+  }
+
+  return configuredFields.map((field) => {
+    const value = answersByField.get(field.id);
+    if (field.type === "checkbox") {
+      if (value !== undefined && typeof value !== "boolean") {
+        throw new Error(`“${field.label}” must be a checkbox answer`);
+      }
+      const checkboxValue = value === true;
+      if (field.required && !checkboxValue) {
+        throw new Error(`Please check “${field.label}” to continue`);
+      }
+      return {
+        fieldId: field.id,
+        label: field.label,
+        type: field.type,
+        value: checkboxValue,
+      };
+    }
+
+    if (value !== undefined && typeof value !== "string") {
+      throw new Error(`“${field.label}” must be a text answer`);
+    }
+    const textValue = typeof value === "string" ? value.trim() : "";
+    if (textValue.length > 2000) {
+      throw new Error(`“${field.label}” must be 2000 characters or fewer`);
+    }
+    if (field.required && !textValue) {
+      throw new Error(`Please answer “${field.label}”`);
+    }
+    return {
+      fieldId: field.id,
+      label: field.label,
+      type: field.type,
+      value: textValue,
+    };
+  });
+}
+
 function sanitizeDisplayName(name: string | undefined): string | undefined {
   const trimmed = name?.trim();
   if (!trimmed) return undefined;
@@ -112,6 +214,7 @@ export const create = mutation({
     submissionFrequencyMinutes: v.optional(v.number()),
     openGraphImageUrl: v.optional(v.string()),
     isPublic: v.optional(v.boolean()),
+    registrationFields: v.optional(v.array(registrationFieldValidator)),
     userName: v.optional(v.string()),
     userImageUrl: v.optional(v.string()),
   },
@@ -177,6 +280,7 @@ export const create = mutation({
     });
 
     const now = Date.now();
+    const registrationFields = validateRegistrationFields(args.registrationFields ?? []);
     const hackathonId = await ctx.db.insert("hackathons", {
       name: args.name,
       description: args.description,
@@ -193,6 +297,7 @@ export const create = mutation({
         openGraphImageUrl: sanitizedOpenGraphImageUrl,
       }),
       isPublic: args.isPublic ?? false,
+      ...(registrationFields.length > 0 && { registrationFields }),
       createdAt: now,
     });
 
@@ -361,6 +466,7 @@ export const update = mutation({
     isPublic: v.optional(v.boolean()),
     feedbackVisible: v.optional(v.boolean()),
     scoresVisible: v.optional(v.union(v.literal("all"), v.literal("judges"), v.literal("none"))),
+    registrationFields: v.optional(v.array(registrationFieldValidator)),
   },
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
@@ -418,6 +524,9 @@ export const update = mutation({
       ...(args.isPublic !== undefined && { isPublic: args.isPublic }),
       ...(args.feedbackVisible !== undefined && { feedbackVisible: args.feedbackVisible }),
       ...(args.scoresVisible !== undefined && { scoresVisible: args.scoresVisible }),
+      ...(args.registrationFields !== undefined && {
+        registrationFields: validateRegistrationFields(args.registrationFields),
+      }),
     });
     return args.hackathonId;
   },
@@ -489,6 +598,7 @@ export const join = mutation({
     joinCode: v.string(),
     userName: v.optional(v.string()),
     userImageUrl: v.optional(v.string()),
+    registrationAnswers: v.optional(v.array(registrationAnswerInputValidator)),
   },
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
@@ -526,6 +636,11 @@ export const join = mutation({
       return { hackathonId: hackathon._id, alreadyMember: true };
     }
 
+    const registrationAnswers = validateRegistrationAnswers(
+      hackathon.registrationFields,
+      args.registrationAnswers
+    );
+
     await ctx.db.insert("hackathonMembers", {
       hackathonId: hackathon._id,
       userId,
@@ -533,6 +648,7 @@ export const join = mutation({
       userImageUrl: args.userImageUrl,
       role,
       status,
+      ...(registrationAnswers.length > 0 && { registrationAnswers }),
       joinedAt: Date.now(),
     });
 
@@ -545,6 +661,7 @@ export const joinPublic = mutation({
     hackathonId: v.id("hackathons"),
     userName: v.optional(v.string()),
     userImageUrl: v.optional(v.string()),
+    registrationAnswers: v.optional(v.array(registrationAnswerInputValidator)),
   },
   handler: async (ctx, args) => {
     const userId = await requireAuthUserId(ctx);
@@ -572,6 +689,11 @@ export const joinPublic = mutation({
       return { hackathonId: args.hackathonId, alreadyMember: true };
     }
 
+    const registrationAnswers = validateRegistrationAnswers(
+      hackathon.registrationFields,
+      args.registrationAnswers
+    );
+
     await ctx.db.insert("hackathonMembers", {
       hackathonId: args.hackathonId,
       userId,
@@ -579,6 +701,7 @@ export const joinPublic = mutation({
       userImageUrl: args.userImageUrl,
       role: "competitor",
       status: "approved",
+      ...(registrationAnswers.length > 0 && { registrationAnswers }),
       joinedAt: Date.now(),
     });
 

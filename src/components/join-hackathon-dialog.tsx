@@ -1,13 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useConvexAuth } from "convex/react";
+import { useMutation, useQuery, useConvexAuth } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { X } from "lucide-react";
-import { useDisplayNamePrompt } from "@/components/display-name-prompt";
+import { RegistrationFieldsForm } from "@/components/registration-fields-form";
+import { getClerkDisplayName } from "@/lib/clerk-user";
+import {
+  serializeRegistrationAnswers,
+  validateRegistrationAnswers,
+  type RegistrationAnswerState,
+} from "@/lib/registration";
 
 interface JoinHackathonDialogProps {
   isOpen: boolean;
@@ -21,8 +27,15 @@ export function JoinHackathonDialog({ isOpen, onClose }: JoinHackathonDialogProp
   const joinHackathon = useMutation(api.hackathons.join);
 
   const [joinCode, setJoinCode] = useState("");
+  const registrationHackathon = useQuery(
+    api.hackathons.getByJoinCode,
+    joinCode.trim().length === 6 ? { joinCode: joinCode.trim() } : "skip"
+  );
+  const registrationFields = registrationHackathon?.registrationFields ?? [];
+  const [displayName, setDisplayName] = useState<string>();
+  const [registrationAnswers, setRegistrationAnswers] = useState<RegistrationAnswerState>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { requestDisplayName, displayNamePrompt } = useDisplayNamePrompt();
+  const resolvedDisplayName = displayName ?? getClerkDisplayName(user) ?? "";
 
   if (!isOpen) return null;
 
@@ -36,8 +49,21 @@ export function JoinHackathonDialog({ isOpen, onClose }: JoinHackathonDialogProp
       toast.error("Please sign in first");
       return;
     }
-    const userName = await requestDisplayName(user, { confirm: true });
+    if (joinCode.trim().length === 6 && registrationHackathon === undefined) {
+      toast.error("Still loading the registration form");
+      return;
+    }
+    const userName = resolvedDisplayName.trim();
     if (!userName) {
+      toast.error("Please enter your name");
+      return;
+    }
+    const registrationError = validateRegistrationAnswers(
+      registrationFields,
+      registrationAnswers
+    );
+    if (registrationError) {
+      toast.error(registrationError);
       return;
     }
     setIsSubmitting(true);
@@ -46,6 +72,10 @@ export function JoinHackathonDialog({ isOpen, onClose }: JoinHackathonDialogProp
         joinCode: joinCode.trim(),
         userName,
         userImageUrl: user?.imageUrl,
+        registrationAnswers: serializeRegistrationAnswers(
+          registrationFields,
+          registrationAnswers
+        ),
       });
       if (result.alreadyMember) {
         toast.info("You're already a member — redirecting to hackathon.");
@@ -53,6 +83,8 @@ export function JoinHackathonDialog({ isOpen, onClose }: JoinHackathonDialogProp
         toast.success("Successfully joined the hackathon!");
       }
       setJoinCode("");
+      setDisplayName(undefined);
+      setRegistrationAnswers({});
       onClose();
       router.push(`/hackathon/${result.hackathonId}`);
     } catch (error) {
@@ -100,6 +132,21 @@ export function JoinHackathonDialog({ isOpen, onClose }: JoinHackathonDialogProp
             </p>
           </div>
 
+          {registrationHackathon === null && joinCode.trim().length === 6 && (
+            <p className="border border-red-500/30 bg-red-500/5 px-3 py-2 text-xs text-red-400">
+              That join code is not valid.
+            </p>
+          )}
+
+          <RegistrationFieldsForm
+            displayName={resolvedDisplayName}
+            onDisplayNameChange={setDisplayName}
+            fields={registrationFields}
+            answers={registrationAnswers}
+            onChange={setRegistrationAnswers}
+            disabled={isSubmitting}
+          />
+
           <div className="flex justify-end gap-3 pt-2 border-t border-[#1F1F1F]">
             <button
               type="button"
@@ -119,7 +166,6 @@ export function JoinHackathonDialog({ isOpen, onClose }: JoinHackathonDialogProp
         </form>
         </div>
       </div>
-      {displayNamePrompt}
     </>
   );
 }
