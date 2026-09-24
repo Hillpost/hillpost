@@ -61,17 +61,18 @@ export function PublicCategoriesSection({
           {categories.length === 1 ? "category" : "categories"}
         </p>
       )}
-      <div className="space-y-3">
-        {categories.map((category) => {
-          const percentage =
-            totalPoints > 0
-              ? Math.round((category.maxScore / totalPoints) * 100)
-              : 0;
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {categories.map((category, index) => {
+          const isLastOddCategory =
+            categories.length % 2 === 1 && index === categories.length - 1;
 
           return (
             <div
               key={category._id}
-              className="border border-[#1F1F1F] bg-[#0A0A0A] p-4"
+              className={cn(
+                "h-full border border-[#1F1F1F] bg-[#0A0A0A] p-4",
+                isLastOddCategory && "sm:col-span-2 xl:col-span-1",
+              )}
             >
               <div className="mb-3 flex items-center justify-between gap-4">
                 <p className="text-sm font-bold uppercase tracking-wide text-white">
@@ -81,14 +82,6 @@ export function PublicCategoriesSection({
                   {category.maxScore} pts
                 </span>
               </div>
-              {totalPoints > 0 && (
-                <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-[#111111]">
-                  <div
-                    className="h-full rounded-full bg-[#00FF41] transition-all duration-700"
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
-              )}
               {category.description && (
                 <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-[#666666]">
                   {category.description}
