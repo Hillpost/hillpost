@@ -10,8 +10,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import { FooterSection } from "@/components/landing/footer-section";
+import { HacktoberRegisterButton } from "@/components/hacktober-register-button";
+import { HacktoberEventDetails } from "@/components/hacktober-event-details";
+import type { Id } from "../../../convex/_generated/dataModel";
 
-const REGISTER_URL = "https://luma.com/a3dgd7y4";
+const LUMA_URL = "https://luma.com/a3dgd7y4";
+const HACKTOBER_ID = "jd7fwr6hahegq95tjw6x7a72098e0qer" as Id<"hackathons">;
 
 export const metadata: Metadata = {
   title: "Hacktober 2026 | Hillpost",
@@ -85,14 +89,15 @@ export default function HacktoberPage() {
                 </p>
               </div>
 
-              <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+              <div className="mt-10 flex flex-col items-start gap-3">
+                <HacktoberRegisterButton hackathonId={HACKTOBER_ID} />
                 <a
-                  href={REGISTER_URL}
+                  href={LUMA_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 border border-[#FF6600] bg-[#FF6600] px-7 py-3.5 text-sm font-bold uppercase tracking-wider text-black transition-colors hover:border-white hover:bg-white"
+                  className="flex items-center gap-3 border border-[#FF6600] px-7 py-3.5 text-sm font-bold uppercase tracking-wider text-[#FF6600] transition-colors hover:bg-[#FF6600] hover:text-black"
                 >
-                  [ Register on Luma ]
+                  [ Join the Luma ]
                 </a>
                 <span className="text-[10px] uppercase tracking-[0.18em] text-[#444444]">
                   Free · Registration is open
@@ -182,6 +187,8 @@ export default function HacktoberPage() {
         </div>
       </section>
 
+      <HacktoberEventDetails hackathonId={HACKTOBER_ID} />
+
       <section className="px-4 pb-10 pt-20 sm:px-6 lg:px-8 lg:pb-14 lg:pt-28">
         <div className="mx-auto max-w-4xl border border-[#1F1F1F] bg-[#0A0A0A] px-6 py-12 text-center sm:px-12 sm:py-16">
           <p className="mb-5 text-xs uppercase tracking-[0.2em] text-[#FF6600]">Oct 1—30, 2026</p>
@@ -189,14 +196,17 @@ export default function HacktoberPage() {
           <p className="mx-auto mt-5 max-w-xl text-sm leading-6 text-[#777777]">
             Grab your spot now. Full event details will follow closer to kickoff.
           </p>
-          <a
-            href={REGISTER_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-8 inline-flex items-center gap-3 border border-[#FF6600] bg-[#FF6600] px-7 py-3.5 text-sm font-bold uppercase tracking-wider text-black transition-colors hover:border-white hover:bg-white"
-          >
-            [ Register on Luma ]
-          </a>
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <HacktoberRegisterButton hackathonId={HACKTOBER_ID} />
+            <a
+              href={LUMA_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 border border-[#FF6600] px-7 py-3.5 text-sm font-bold uppercase tracking-wider text-[#FF6600] transition-colors hover:bg-[#FF6600] hover:text-black"
+            >
+              [ Join the Luma ]
+            </a>
+          </div>
         </div>
       </section>
 

@@ -30,6 +30,8 @@ export default defineSchema({
     judgeJoinCode: v.string(),
     openGraphImageUrl: v.optional(v.string()),
     isPublic: v.optional(v.boolean()),
+    hidePublicPage: v.optional(v.boolean()),
+    publicPageUrl: v.optional(v.string()),
     feedbackVisible: v.optional(v.boolean()),
     scoresVisible: v.optional(v.union(v.boolean(), v.literal("all"), v.literal("judges"), v.literal("none"))),
     registrationFields: v.optional(v.array(registrationField)),
