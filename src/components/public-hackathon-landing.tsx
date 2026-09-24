@@ -110,7 +110,7 @@ function RegisterButton({
     "group inline-flex items-center gap-2 border border-[#00FF41] bg-[#00FF41] font-bold text-black uppercase tracking-wider transition-all hover:bg-white hover:border-white disabled:cursor-not-allowed disabled:opacity-60",
     large ? "px-8 py-3.5 text-sm" : "w-full justify-center px-6 py-3 text-xs"
   );
-  const label = isJoining ? "Joining..." : "Register as Competitor";
+  const label = isJoining ? "Joining..." : "Register";
 
   if (isAuthenticated && onJoin) {
     return (
